@@ -1,0 +1,33 @@
+fastapi==0.131.0
+uvicorn[standard]==0.41.0
+pydantic==2.12.5
+pydantic[email]==2.12.5
+pydantic-settings==2.13.1
+
+# Database
+# gridfs is bundled inside pymongo — no separate package needed
+mongoengine==0.29.1
+pymongo==4.16.0
+
+# Cache
+redis==7.2.0
+hiredis==3.3.0
+
+# Auth
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.22
+
+# OpenTelemetry
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp-proto-http==1.39.1
+opentelemetry-instrumentation-fastapi==0.60b1
+opentelemetry-instrumentation-pymongo==0.60b1
+opentelemetry-instrumentation-redis==0.60b1
+opentelemetry-instrumentation-logging==0.60b1
+
+# Utilities
+python-dotenv==1.2.1
+httpx==0.28.1
+setuptools==82.0.0

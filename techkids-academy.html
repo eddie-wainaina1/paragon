@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nifty by Paragon</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #F97316;
+    --navy: #1C1A17;
+    --mint: #22C55E;
+    --sun: #FACC15;
+    --coral: #EF4444;
+    --violet: #D97706;
+    --bg: #FFF7ED;
+    --card: #FFFFFF;
+    --text: #1C1A17;
+    --muted: #78716C;
+    --border: #FED7AA;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(249,115,22,0.12);
+    --orange: #F97316;
+    --orange-dark: #EA580C;
+    --orange-light: #FFEDD5;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Fredoka',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* ---- SCREENS ---- */
+  .screen { display:none; min-height:100vh; }
+  .screen.active { display:flex; flex-direction:column; }
+
+  /* ---- LANDING ---- */
+  #landing {
+    background: linear-gradient(145deg, #F97316 0%, #EA580C 40%, #C2410C 100%);
+    align-items:center; justify-content:center; flex-direction:column; gap:32px; padding:40px 20px;
+    position:relative; overflow:hidden;
+  }
+  #landing::before {
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(circle at 15% 25%, rgba(255,255,255,0.18) 0%, transparent 55%),
+                radial-gradient(circle at 85% 75%, rgba(0,0,0,0.12) 0%, transparent 50%);
+  }
+  .land-logo { font-family:'Fredoka One',cursive; font-size:3rem; font-weight:400; color:#fff; text-align:center; line-height:1.1; z-index:1; text-shadow: 0 3px 12px rgba(0,0,0,0.25); letter-spacing:0.01em; }
+  .land-logo span { color:#FDE68A; }
+  .land-tagline { color:rgba(255,255,255,0.90); font-size:1.1rem; text-align:center; max-width:420px; z-index:1; font-weight:500; }
+  .land-btns { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; z-index:1; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:50px; font-family:'Fredoka',sans-serif; font-weight:600; font-size:1rem; cursor:pointer; border:none; transition:all .2s; letter-spacing:0.02em; }
+  .btn-primary { background:#fff; color:var(--orange); box-shadow:0 4px 20px rgba(0,0,0,0.20); }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,0.28); }
+  .btn-outline { background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.75); }
+  .btn-outline:hover { background:rgba(255,255,255,0.18); }
+  .land-roles { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; z-index:1; }
+  .role-chip { background:rgba(255,255,255,0.22); backdrop-filter:blur(8px); color:#fff; padding:6px 16px; border-radius:50px; font-size:0.85rem; font-weight:600; border:1px solid rgba(255,255,255,0.4); }
+  .floating-icons { position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .fi { position:absolute; font-size:2rem; opacity:0.13; animation:float 6s ease-in-out infinite; }
+  .fi:nth-child(1){top:8%;left:6%;animation-delay:0s}
+  .fi:nth-child(2){top:15%;right:8%;animation-delay:1s}
+  .fi:nth-child(3){bottom:20%;left:10%;animation-delay:2s}
+  .fi:nth-child(4){bottom:10%;right:12%;animation-delay:3s}
+  .fi:nth-child(5){top:50%;left:3%;animation-delay:1.5s}
+  .fi:nth-child(6){top:40%;right:4%;animation-delay:2.5s}
+  @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-16px) rotate(8deg)} }
+
+  /* ---- AUTH MODAL ---- */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:24px; padding:36px; width:100%; max-width:480px; box-shadow:0 24px 60px rgba(0,0,0,0.20); animation:slideUp .25s ease; }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal h2 { font-family:'Fredoka One',cursive; font-size:1.7rem; font-weight:400; color:var(--navy); margin-bottom:6px; letter-spacing:0.01em; }
+  .modal p.sub { color:var(--muted); font-size:0.9rem; margin-bottom:24px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-weight:600; font-size:0.85rem; color:var(--text); margin-bottom:6px; }
+  .form-group input, .form-group select { width:100%; padding:12px 16px; border:2px solid var(--border); border-radius:12px; font-family:'Fredoka',sans-serif; font-size:0.95rem; transition:border-color .2s; outline:none; }
+  .form-group input:focus, .form-group select:focus { border-color:var(--orange); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btn-full { width:100%; justify-content:center; padding:14px; border-radius:12px; font-size:1rem; }
+  .btn-sky { background:var(--orange); color:#fff; }
+  .btn-sky:hover { background:var(--orange-dark); }
+  .btn-mint { background:var(--mint); color:#fff; }
+  .btn-mint:hover { background:#16A34A; }
+  .modal-switch { text-align:center; margin-top:16px; font-size:0.9rem; color:var(--muted); }
+  .modal-switch a { color:var(--sky); font-weight:700; cursor:pointer; text-decoration:none; }
+  .close-modal { float:right; background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--muted); margin-top:-8px; }
+  .tab-bar { display:flex; gap:4px; background:var(--bg); border-radius:12px; padding:4px; margin-bottom:20px; }
+  .tab-btn { flex:1; padding:8px; border:none; background:none; border-radius:8px; font-family:'Nunito',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; color:var(--muted); transition:all .2s; }
+  .tab-btn.active { background:#fff; color:var(--orange); box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+
+  /* ---- MAIN APP ---- */
+  #app { flex-direction:column; }
+
+  /* ---- TOPBAR ---- */
+  .topbar { background:#fff; border-bottom:2px solid var(--border); padding:0 24px; height:64px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .topbar-logo { font-family:'Fredoka One',cursive; font-size:1.4rem; font-weight:400; color:var(--orange); letter-spacing:0.01em; }
+  .topbar-logo span { color:var(--orange-dark); }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem; color:#fff; cursor:pointer; }
+  .user-info { text-align:right; }
+  .user-name { font-weight:700; font-size:0.9rem; }
+  .user-role { font-size:0.75rem; color:var(--muted); }
+  .notif-btn { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--muted); position:relative; }
+  .badge { position:absolute; top:-4px; right:-4px; background:var(--coral); color:#fff; font-size:0.6rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; }
+
+  /* ---- LAYOUT ---- */
+  .app-body { display:flex; flex:1; overflow:hidden; }
+  .sidebar { width:230px; background:#fff; border-right:2px solid var(--border); display:flex; flex-direction:column; padding:20px 12px; gap:4px; flex-shrink:0; overflow-y:auto; }
+  .main-content { flex:1; overflow-y:auto; padding:28px; }
+
+  .nav-section { font-size:0.7rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; padding:8px 12px 4px; margin-top:8px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; font-size:0.9rem; color:var(--muted); transition:all .15s; border:none; background:none; width:100%; text-align:left; }
+  .nav-item:hover { background:var(--bg); color:var(--text); }
+  .nav-item.active { background:linear-gradient(135deg,#FFEDD5,#FEF3C7); color:var(--orange); }
+  .nav-item .icon { font-size:1.1rem; width:22px; text-align:center; }
+
+  /* ---- PAGE SECTIONS ---- */
+  .page-section { display:none; }
+  .page-section.active { display:block; }
+  .page-title { font-family:'Fredoka One',cursive; font-size:1.8rem; font-weight:400; color:var(--navy); margin-bottom:4px; letter-spacing:0.01em; }
+  .page-sub { color:var(--muted); margin-bottom:24px; font-size:0.95rem; }
+
+  /* ---- STATS CARDS ---- */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-bottom:28px; }
+  .stat-card { background:#fff; border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); border:2px solid var(--border); display:flex; flex-direction:column; gap:4px; }
+  .stat-val { font-family:"Fredoka One",cursive; font-size:2rem; font-weight:400; }
+  .stat-label { font-size:0.8rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .stat-icon { font-size:1.6rem; margin-bottom:4px; }
+
+  /* ---- CONTENT CARDS ---- */
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .section-title { font-family:'Fredoka One',cursive; font-size:1.2rem; font-weight:400; color:var(--navy); letter-spacing:0.01em; }
+  .content-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+  .content-card { background:#fff; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); border:2px solid var(--border); cursor:pointer; transition:all .2s; }
+  .content-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(249,115,22,0.18); border-color:var(--orange); }
+  .card-thumb { height:130px; display:flex; align-items:center; justify-content:center; font-size:3rem; position:relative; }
+  .card-type-badge { position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:50px; font-size:0.7rem; font-weight:800; text-transform:uppercase; }
+  .badge-text { background:#FFEDD5; color:#C2410C; }
+  .badge-video { background:#FCE7F3; color:#BE185D; }
+  .badge-audio { background:#D1FAE5; color:#065F46; }
+  .badge-global { background:#FEF3C7; color:#92400E; }
+  .badge-org { background:#EDE9FE; color:#5B21B6; }
+  .badge-locked { background:#FEE2E2; color:#991B1B; }
+  .card-body { padding:14px 16px; }
+  .card-title { font-weight:800; font-size:0.95rem; margin-bottom:4px; color:var(--navy); }
+  .card-meta { font-size:0.78rem; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; }
+  .card-author { display:flex; align-items:center; gap:4px; }
+
+  /* ---- TABLE ---- */
+  .table-card { background:#fff; border-radius:var(--radius); border:2px solid var(--border); overflow:hidden; box-shadow:var(--shadow); }
+  table { width:100%; border-collapse:collapse; }
+  th { background:var(--bg); padding:12px 16px; text-align:left; font-size:0.8rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  td { padding:12px 16px; border-top:1px solid var(--border); font-size:0.9rem; }
+  tr:hover td { background:#F8FAFC; }
+  .pill { display:inline-block; padding:3px 12px; border-radius:50px; font-size:0.75rem; font-weight:700; }
+  .pill-sky { background:#FFEDD5; color:#C2410C; }
+  .pill-mint { background:#D1FAE5; color:#065F46; }
+  .pill-sun { background:#FEF3C7; color:#92400E; }
+  .pill-coral { background:#FEE2E2; color:#991B1B; }
+  .pill-violet { background:#EDE9FE; color:#5B21B6; }
+  .pill-gray { background:#F1F5F9; color:#475569; }
+
+  /* ---- FORM CARD ---- */
+  .form-card { background:#fff; border-radius:var(--radius); border:2px solid var(--border); padding:28px; box-shadow:var(--shadow); max-width:600px; }
+  .form-card h3 { font-family:'Fredoka One',cursive; font-size:1.3rem; font-weight:400; margin-bottom:20px; color:var(--navy); letter-spacing:0.01em; }
+  .content-type-selector { display:flex; gap:12px; margin-bottom:20px; }
+  .type-opt { flex:1; padding:16px; border:2px solid var(--border); border-radius:12px; cursor:pointer; text-align:center; transition:all .2s; }
+  .type-opt:hover { border-color:var(--orange); }
+  .type-opt.selected { border-color:var(--orange); background:#EFF6FF; }
+  .type-opt .type-icon { font-size:1.8rem; margin-bottom:4px; }
+  .type-opt .type-name { font-weight:700; font-size:0.85rem; }
+  .btn-sm { padding:7px 16px; font-size:0.82rem; }
+  .btn-danger { background:var(--coral); color:#fff; }
+  .btn-danger:hover { background:#E11D48; }
+  .btn-violet { background:var(--orange-dark); color:#fff; }
+  .actions-group { display:flex; gap:8px; }
+
+  /* ---- WELCOME BANNER ---- */
+  .welcome-banner { background:linear-gradient(135deg,var(--orange) 0%,var(--orange-dark) 60%, #92400E 100%); border-radius:20px; padding:28px 32px; color:#fff; margin-bottom:28px; position:relative; overflow:hidden; }
+  .welcome-banner::after { content:'🚀'; position:absolute; right:28px; top:50%; transform:translateY(-50%); font-size:4rem; opacity:0.2; }
+  .welcome-banner h2 { font-family:'Fredoka One',cursive; font-size:1.6rem; font-weight:400; margin-bottom:4px; letter-spacing:0.01em; }
+  .welcome-banner p { opacity:.9; font-size:0.95rem; }
+
+  /* ---- TOAST ---- */
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--navy); color:#fff; padding:14px 20px; border-radius:12px; font-weight:700; font-size:0.9rem; z-index:9999; transform:translateY(80px); opacity:0; transition:all .3s; display:flex; align-items:center; gap:8px; }
+  .toast.show { transform:translateY(0); opacity:1; }
+
+  /* ---- LOCKED OVERLAY ---- */
+  .locked-msg { text-align:center; padding:40px 20px; color:var(--muted); }
+  .locked-msg .lock-icon { font-size:3rem; margin-bottom:12px; }
+  .locked-msg h3 { font-family:'Fredoka One',cursive; font-size:1.3rem; color:var(--navy); margin-bottom:8px; }
+
+  /* ---- RESPONSIVE ---- */
+  @media(max-width:700px) {
+    .sidebar { display:none; }
+    .main-content { padding:16px; }
+    .stats-grid { grid-template-columns:1fr 1fr; }
+  }
+
+  /* Role colors */
+  .av-super { background:linear-gradient(135deg,#F97316,#EA580C); }
+  .av-tutor { background:linear-gradient(135deg,#F97316,#FACC15); }
+  .av-finance { background:linear-gradient(135deg,#FACC15,#F97316); }
+  .av-orgadmin { background:linear-gradient(135deg,#EA580C,#C2410C); }
+  .av-teacher { background:linear-gradient(135deg,#22C55E,#F97316); }
+  .av-student { background:linear-gradient(135deg,#F97316,#FBBF24); }
+
+  .empty-state { text-align:center; padding:48px 20px; color:var(--muted); }
+  .empty-state .es-icon { font-size:3.5rem; margin-bottom:12px; }
+  .empty-state p { font-size:0.95rem; }
+
+  .org-badge { display:inline-flex; align-items:center; gap:4px; background:#F1F5F9; border-radius:50px; padding:2px 10px; font-size:0.75rem; font-weight:700; color:var(--muted); }
+  .org-badge.key { background:#FEF3C7; color:#92400E; }
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="landing" class="screen active">
+  <div class="floating-icons">
+    <div class="fi">💻</div><div class="fi">🤖</div><div class="fi">🔬</div>
+    <div class="fi">🎮</div><div class="fi">⚡</div><div class="fi">🌐</div>
+  </div>
+  <div class="land-logo"><span>Nifty</span> by Paragon</div>
+  <div class="land-tagline">The smart platform where schools, teachers, and students explore the world of technology together.</div>
+  <div class="land-roles">
+    <div class="role-chip">🏫 Organizations</div>
+    <div class="role-chip">👩‍🏫 Teachers</div>
+    <div class="role-chip">🎓 Students</div>
+    <div class="role-chip">⭐ Tutors</div>
+  </div>
+  <div class="land-btns">
+    <button class="btn btn-primary" onclick="openModal('login')">Sign In</button>
+    <button class="btn btn-outline" onclick="openModal('register')">Register Organization</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="close-modal" onclick="closeModal()">✕</button>
+
+    <!-- LOGIN TAB -->
+    <div id="loginForm">
+      <h2>Welcome back! 👋</h2>
+      <p class="sub">Sign in to your Nifty by Paragon account</p>
+      <div class="tab-bar" style="margin-bottom:16px;">
+        <button class="tab-btn active" onclick="quickLogin('super_admin')">Super Admin</button>
+        <button class="tab-btn" onclick="quickLogin('org_admin')">Org Admin</button>
+        <button class="tab-btn" onclick="quickLogin('teacher')">Teacher</button>
+        <button class="tab-btn" onclick="quickLogin('student')">Student</button>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" value="admin@key.edu" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" value="••••••••" placeholder="Password">
+      </div>
+      <button class="btn btn-sky btn-full" onclick="doLogin()">Sign In →</button>
+      <div class="modal-switch">Don't have an account? <a onclick="switchTab('register')">Register Organization</a></div>
+    </div>
+
+    <!-- REGISTER TAB -->
+    <div id="registerForm" style="display:none;">
+      <h2>Register Organization 🏫</h2>
+      <p class="sub">Create your school's account on Nifty by Paragon</p>
+      <div class="form-group">
+        <label>Organization Name</label>
+        <input type="text" id="regOrgName" placeholder="e.g. Sunrise Academy">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Admin First Name</label>
+          <input type="text" id="regFirst" placeholder="Jane">
+        </div>
+        <div class="form-group">
+          <label>Admin Last Name</label>
+          <input type="text" id="regLast" placeholder="Doe">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Admin Email</label>
+        <input type="email" id="regEmail" placeholder="admin@school.edu">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="Create password">
+      </div>
+      <button class="btn btn-mint btn-full" onclick="doRegister()">Create Organization →</button>
+      <div class="modal-switch">Already have an account? <a onclick="switchTab('login')">Sign In</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="screen">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo"><span>Nifty</span> by Paragon</div>
+    <div class="topbar-right">
+      <button class="notif-btn">🔔<span class="badge">3</span></button>
+      <div class="user-info">
+        <div class="user-name" id="topUserName">—</div>
+        <div class="user-role" id="topUserRole">—</div>
+      </div>
+      <div class="avatar" id="topAvatar" onclick="logout()">SA</div>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- Content -->
+    <div class="main-content" id="mainContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ <span id="toastMsg"></span></div>
+
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+const DB = {
+  organizations: [
+    { id:'org_key', name:'Key', slug:'key', type:'platform' }
+  ],
+  users: [
+    { id:'u1', name:'Alex Reynolds', email:'admin@key.edu', role:'super_admin', org:'org_key', avatar:'AR' },
+    { id:'u2', name:'Sam Carter', email:'tutor@key.edu', role:'tutor', org:'org_key', avatar:'SC' },
+    { id:'u3', name:'Morgan Lee', email:'finance@key.edu', role:'finance', org:'org_key', avatar:'ML' },
+  ],
+  content: [
+    { id:'c1', title:'Introduction to Python 🐍', type:'text', scope:'global', org:'org_key', author:'u2', authorName:'Sam Carter', subject:'Programming', thumb:'#DBEAFE', emoji:'📝', views:342, locked:false },
+    { id:'c2', title:'How the Internet Works 🌐', type:'video', scope:'global', org:'org_key', author:'u2', authorName:'Sam Carter', subject:'Networking', thumb:'#FCE7F3', emoji:'🎬', views:210, locked:false },
+    { id:'c3', title:'Intro to AI & Machine Learning 🤖', type:'audio', scope:'global', org:'org_key', author:'u1', authorName:'Alex Reynolds', subject:'AI', thumb:'#D1FAE5', emoji:'🎧', views:189, locked:false },
+    { id:'c4', title:'HTML Basics for Beginners', type:'text', scope:'global', org:'org_key', author:'u2', authorName:'Sam Carter', subject:'Web Dev', thumb:'#FEF3C7', emoji:'📄', views:95, locked:false },
+  ],
+  classes: [],
+  sessions: {}
+};
+
+let currentUser = null;
+
+// ============================================================
+// AUTH
+// ============================================================
+function quickLogin(role) {
+  const map = {
+    super_admin: { email:'admin@key.edu', pass:'password' },
+    org_admin:   { email:'oadmin@sunrise.edu', pass:'password' },
+    teacher:     { email:'teacher@sunrise.edu', pass:'password' },
+    student:     { email:'student@sunrise.edu', pass:'password' },
+    tutor:       { email:'tutor@key.edu', pass:'password' },
+  };
+  document.getElementById('loginEmail').value = map[role].email;
+  document.getElementById('loginPass').value = map[role].pass;
+  document.querySelectorAll('.tab-bar .tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['super_admin','org_admin','teacher','student'].indexOf(role)===i);
+  });
+}
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  let user = DB.users.find(u => u.email === email);
+  if (!user) {
+    // create demo user on the fly
+    const demoMap = {
+      'oadmin@sunrise.edu':  { id:'u_oa', name:'Jamie Sunrise', role:'org_admin', org:'org_demo', avatar:'JS' },
+      'teacher@sunrise.edu': { id:'u_t',  name:'Chris Blake', role:'teacher',   org:'org_demo', avatar:'CB' },
+      'student@sunrise.edu': { id:'u_s',  name:'Alex Kim',    role:'student',   org:'org_demo', avatar:'AK' },
+    };
+    if (demoMap[email]) {
+      // ensure org exists
+      if (!DB.organizations.find(o=>o.id==='org_demo')) {
+        DB.organizations.push({id:'org_demo',name:'Sunrise Academy',slug:'sunrise',type:'school'});
+        DB.users.push(
+          {id:'u_oa', name:'Jamie Sunrise', email:'oadmin@sunrise.edu', role:'org_admin', org:'org_demo', avatar:'JS'},
+          {id:'u_t',  name:'Chris Blake',   email:'teacher@sunrise.edu', role:'teacher',   org:'org_demo', avatar:'CB'},
+          {id:'u_s',  name:'Alex Kim',      email:'student@sunrise.edu', role:'student',   org:'org_demo', avatar:'AK'},
+        );
+      }
+      user = DB.users.find(u=>u.email===email);
+    }
+  }
+  if (!user) { showToast('❌ User not found'); return; }
+  currentUser = user;
+  closeModal();
+  showApp();
+}
+
+function doRegister() {
+  const name = document.getElementById('regOrgName').value;
+  const first = document.getElementById('regFirst').value;
+  const last = document.getElementById('regLast').value;
+  const email = document.getElementById('regEmail').value;
+  if (!name||!first||!email) { showToast('⚠️ Please fill all fields'); return; }
+  const orgId = 'org_' + Date.now();
+  const userId = 'u_' + Date.now();
+  DB.organizations.push({id:orgId,name,slug:name.toLowerCase().replace(/\s/g,'-'),type:'school'});
+  const newUser = {id:userId,name:`${first} ${last}`,email,role:'org_admin',org:orgId,avatar:first[0]+(last[0]||'')};
+  DB.users.push(newUser);
+  currentUser = newUser;
+  closeModal();
+  showApp();
+  showToast(`🎉 ${name} registered! Welcome, ${first}!`);
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('landing').classList.add('active');
+  showToast('👋 Signed out successfully');
+}
+
+// ============================================================
+// APP SHELL
+// ============================================================
+function showApp() {
+  document.getElementById('landing').classList.remove('active');
+  document.getElementById('app').classList.add('active');
+  updateTopbar();
+  buildSidebar();
+  navigate('dashboard');
+}
+
+const ROLE_COLORS = {
+  super_admin:'av-super', tutor:'av-tutor', finance:'av-finance',
+  org_admin:'av-orgadmin', teacher:'av-teacher', student:'av-student'
+};
+const ROLE_LABELS = {
+  super_admin:'Super Admin', tutor:'Tutor', finance:'Finance',
+  org_admin:'Org Admin', teacher:'Teacher', student:'Student'
+};
+
+function updateTopbar() {
+  document.getElementById('topUserName').textContent = currentUser.name;
+  document.getElementById('topUserRole').textContent = ROLE_LABELS[currentUser.role];
+  const av = document.getElementById('topAvatar');
+  av.textContent = currentUser.avatar;
+  av.className = 'avatar ' + (ROLE_COLORS[currentUser.role]||'av-tutor');
+}
+
+function buildSidebar() {
+  const role = currentUser.role;
+  let items = [];
+
+  items.push({ section:'General' });
+  items.push({ id:'dashboard', icon:'🏠', label:'Dashboard' });
+  items.push({ id:'content_browse', icon:'📚', label:'Content Library' });
+
+  if (['super_admin','tutor','teacher','org_admin'].includes(role)) {
+    items.push({ section:'Content' });
+    items.push({ id:'content_create', icon:'✏️', label:'Create Content' });
+    items.push({ id:'my_content', icon:'🗂️', label:'My Content' });
+  }
+
+  if (['super_admin','org_admin','teacher'].includes(role)) {
+    items.push({ section:'Classes' });
+    items.push({ id:'classes', icon:'🎓', label:'Classes' });
+  }
+
+  if (['super_admin','org_admin'].includes(role)) {
+    items.push({ section:'Management' });
+    items.push({ id:'users', icon:'👥', label:'Users' });
+    if (role === 'super_admin') {
+      items.push({ id:'organizations', icon:'🏫', label:'Organizations' });
+    }
+  }
+
+  items.push({ section:'Account' });
+  items.push({ id:'profile', icon:'⚙️', label:'Settings' });
+
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = items.map(item => {
+    if (item.section) return `<div class="nav-section">${item.section}</div>`;
+    return `<button class="nav-item" id="nav_${item.id}" onclick="navigate('${item.id}')">
+      <span class="icon">${item.icon}</span>${item.label}
+    </button>`;
+  }).join('');
+}
+
+function navigate(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById('nav_' + page);
+  if (navEl) navEl.classList.add('active');
+  renderPage(page);
+}
+
+// ============================================================
+// PAGE RENDERER
+// ============================================================
+function renderPage(page) {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = '';
+
+  const pages = {
+    dashboard:       renderDashboard,
+    content_browse:  renderContentBrowse,
+    content_create:  renderContentCreate,
+    my_content:      renderMyContent,
+    classes:         renderClasses,
+    users:           renderUsers,
+    organizations:   renderOrganizations,
+    profile:         renderProfile,
+  };
+
+  (pages[page] || renderDashboard)(mc);
+}
+
+// ---- DASHBOARD ----
+function renderDashboard(el) {
+  const role = currentUser.role;
+  const orgName = DB.organizations.find(o=>o.id===currentUser.org)?.name || 'Key';
+  const myContent = DB.content.filter(c => role==='super_admin' ? true : c.org===currentUser.org || c.scope==='global');
+  const myUsers = DB.users.filter(u => role==='super_admin' ? true : u.org===currentUser.org);
+
+  el.innerHTML = `
+    <div class="welcome-banner">
+      <h2>Hello, ${currentUser.name.split(' ')[0]}! 👋</h2>
+      <p>Welcome to Nifty by Paragon — ${orgName} · ${ROLE_LABELS[role]}</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-val" style="color:var(--orange)">${myContent.length}</div><div class="stat-label">Content Items</div></div>
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" style="color:var(--orange-dark)">${myUsers.length}</div><div class="stat-label">Users</div></div>
+      <div class="stat-card"><div class="stat-icon">🏫</div><div class="stat-val" style="color:var(--mint)">${role==='super_admin' ? DB.organizations.length : 1}</div><div class="stat-label">Organizations</div></div>
+      <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-val" style="color:var(--sun)">${DB.classes.length}</div><div class="stat-label">Classes</div></div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">📌 Recent Content</div>
+      <button class="btn btn-sky btn-sm" onclick="navigate('content_browse')">View All</button>
+    </div>
+    <div class="content-grid">
+      ${myContent.slice(0,4).map(c => contentCardHTML(c)).join('')}
+    </div>
+  `;
+}
+
+function contentCardHTML(c) {
+  const scopeBadge = c.scope==='global'
+    ? `<span class="card-type-badge badge-global">🌍 Global</span>`
+    : `<span class="card-type-badge badge-org">🏫 Org</span>`;
+  const typeBadge = `<span class="card-type-badge badge-${c.type}" style="top:10px;left:10px;">${c.type}</span>`;
+  const thumbColors = {'#DBEAFE':'linear-gradient(135deg,#DBEAFE,#EFF6FF)','#FCE7F3':'linear-gradient(135deg,#FCE7F3,#FDF2F8)','#D1FAE5':'linear-gradient(135deg,#D1FAE5,#ECFDF5)','#FEF3C7':'linear-gradient(135deg,#FEF3C7,#FFFBEB)'};
+  return `<div class="content-card" onclick="viewContent('${c.id}')">
+    <div class="card-thumb" style="background:${thumbColors[c.thumb]||c.thumb}">
+      <span>${c.emoji}</span>
+      ${typeBadge}${scopeBadge}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${c.title}</div>
+      <div class="card-meta">
+        <span>📖 ${c.subject}</span>
+        <span>👁 ${c.views} views</span>
+        <span class="card-author">✍️ ${c.authorName}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---- CONTENT BROWSE ----
+function renderContentBrowse(el) {
+  const role = currentUser.role;
+  let visible = DB.content.filter(c => {
+    if (role === 'super_admin') return true;
+    if (c.scope === 'global') return true;
+    if (c.org === currentUser.org) return true;
+    return false;
+  });
+
+  el.innerHTML = `
+    <div class="page-title">📚 Content Library</div>
+    <div class="page-sub">Browse all available learning content</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-sky btn-sm" onclick="filterContent('all',this)">All</button>
+      <button class="btn btn-sm" style="background:#DBEAFE;color:#1D4ED8" onclick="filterContent('text',this)">📝 Text</button>
+      <button class="btn btn-sm" style="background:#FCE7F3;color:#BE185D" onclick="filterContent('video',this)">🎬 Video</button>
+      <button class="btn btn-sm" style="background:#D1FAE5;color:#065F46" onclick="filterContent('audio',this)">🎧 Audio</button>
+      <button class="btn btn-sm" style="background:#FEF3C7;color:#92400E" onclick="filterContent('global',this)">🌍 Global</button>
+    </div>
+    <div class="content-grid" id="contentGrid">
+      ${visible.map(c => contentCardHTML(c)).join('')}
+    </div>
+    ${visible.length===0 ? `<div class="empty-state"><div class="es-icon">📭</div><p>No content available yet.</p></div>` : ''}
+  `;
+}
+
+function filterContent(filter, btn) {
+  document.querySelectorAll('.btn-sm').forEach(b=>b.style.fontWeight='600');
+  btn.style.fontWeight='800';
+  const role = currentUser.role;
+  let visible = DB.content.filter(c => {
+    let access = role==='super_admin' || c.scope==='global' || c.org===currentUser.org;
+    if (!access) return false;
+    if (filter==='all') return true;
+    if (filter==='global') return c.scope==='global';
+    return c.type===filter;
+  });
+  document.getElementById('contentGrid').innerHTML = visible.map(c=>contentCardHTML(c)).join('') ||
+    `<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">🔍</div><p>No ${filter} content found.</p></div>`;
+}
+
+function viewContent(id) {
+  const c = DB.content.find(x=>x.id===id);
+  if (!c) return;
+  c.views++;
+  showToast(`📖 Opening: ${c.title}`);
+}
+
+// ---- CREATE CONTENT ----
+function renderContentCreate(el) {
+  const role = currentUser.role;
+  const canGlobal = ['super_admin','tutor'].includes(role);
+
+  el.innerHTML = `
+    <div class="page-title">✏️ Create Content</div>
+    <div class="page-sub">Add new learning material for ${canGlobal ? 'all subscribers or your organization' : 'your organization'}</div>
+    <div class="form-card">
+      <h3>New Content</h3>
+      <div class="form-group">
+        <label>Content Title</label>
+        <input type="text" id="newTitle" placeholder="e.g. Introduction to Scratch Programming">
+      </div>
+      <div class="form-group">
+        <label>Subject / Topic</label>
+        <input type="text" id="newSubject" placeholder="e.g. Programming, AI, Robotics">
+      </div>
+      <div class="form-group">
+        <label>Content Type</label>
+        <div class="content-type-selector" id="typeSelector">
+          <div class="type-opt selected" onclick="selectType(this,'text')"><div class="type-icon">📝</div><div class="type-name">Text</div></div>
+          <div class="type-opt" onclick="selectType(this,'video')"><div class="type-icon">🎬</div><div class="type-name">Video</div></div>
+          <div class="type-opt" onclick="selectType(this,'audio')"><div class="type-icon">🎧</div><div class="type-name">Audio</div></div>
+        </div>
+      </div>
+      ${canGlobal ? `
+      <div class="form-group">
+        <label>Access Scope</label>
+        <select id="newScope">
+          <option value="global">🌍 Global — visible to all subscribers</option>
+          <option value="org">🏫 Organization only</option>
+        </select>
+      </div>` : `<input type="hidden" id="newScope" value="org">`}
+      <div class="form-group">
+        <label>Content Body</label>
+        <textarea id="newBody" style="width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:12px;font-family:Nunito,sans-serif;font-size:0.95rem;resize:vertical;min-height:120px;outline:none;" placeholder="Write your lesson content here, or paste a URL for video/audio..."></textarea>
+      </div>
+      <button class="btn btn-sky btn-full" onclick="submitContent()" style="margin-top:8px;">Publish Content 🚀</button>
+    </div>
+  `;
+}
+
+let selectedType = 'text';
+function selectType(el, type) {
+  selectedType = type;
+  document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function submitContent() {
+  const title = document.getElementById('newTitle').value;
+  const subject = document.getElementById('newSubject').value;
+  const scopeEl = document.getElementById('newScope');
+  const scope = scopeEl ? (scopeEl.value || 'org') : 'org';
+  if (!title||!subject) { showToast('⚠️ Please fill Title and Subject'); return; }
+  const emojis = {text:'📄',video:'🎬',audio:'🎧'};
+  const thumbs = {text:'#DBEAFE',video:'#FCE7F3',audio:'#D1FAE5'};
+  const newC = {
+    id:'c'+Date.now(), title, type:selectedType, scope,
+    org:currentUser.org, author:currentUser.id, authorName:currentUser.name,
+    subject, thumb:thumbs[selectedType], emoji:emojis[selectedType], views:0, locked:false
+  };
+  DB.content.push(newC);
+  showToast('🎉 Content published successfully!');
+  navigate('my_content');
+}
+
+// ---- MY CONTENT ----
+function renderMyContent(el) {
+  const role = currentUser.role;
+  let mine = role==='super_admin'
+    ? DB.content
+    : DB.content.filter(c => c.author === currentUser.id);
+
+  el.innerHTML = `
+    <div class="page-title">🗂️ My Content</div>
+    <div class="page-sub">${mine.length} item${mine.length!==1?'s':''} you've created</div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Title</th><th>Type</th><th>Scope</th><th>Views</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${mine.length ? mine.map(c=>`
+            <tr>
+              <td><strong>${c.title}</strong><br><small style="color:var(--muted)">${c.subject}</small></td>
+              <td><span class="pill pill-sky">${c.type}</span></td>
+              <td><span class="pill ${c.scope==='global'?'pill-sun':'pill-violet'}">${c.scope==='global'?'🌍 Global':'🏫 Org'}</span></td>
+              <td>👁 ${c.views}</td>
+              <td>
+                <div class="actions-group">
+                  <button class="btn btn-sky btn-sm" onclick="editContent('${c.id}')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteContent('${c.id}')">Delete</button>
+                </div>
+              </td>
+            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="es-icon">📭</div><p>No content yet. Create your first lesson!</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function editContent(id) { showToast('✏️ Edit mode — feature in full version'); }
+function deleteContent(id) {
+  DB.content = DB.content.filter(c=>c.id!==id);
+  showToast('🗑️ Content deleted');
+  navigate('my_content');
+}
+
+// ---- CLASSES ----
+function renderClasses(el) {
+  const role = currentUser.role;
+  const myClasses = DB.classes.filter(c =>
+    role==='super_admin' ? true :
+    role==='teacher' ? c.teacher===currentUser.id :
+    c.org===currentUser.org
+  );
+
+  el.innerHTML = `
+    <div class="page-title">🎓 Classes</div>
+    <div class="page-sub">Manage classes and unlock content for students</div>
+    ${['teacher','org_admin','super_admin'].includes(role) ? `
+    <div class="form-card" style="margin-bottom:24px;">
+      <h3>Create New Class</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Class Name</label><input type="text" id="newClassName" placeholder="e.g. Grade 5 — Tech Explorers"></div>
+        <div class="form-group"><label>Grade / Level</label><input type="text" id="newClassGrade" placeholder="e.g. Grade 5"></div>
+      </div>
+      <button class="btn btn-mint" onclick="createClass()">Create Class ✓</button>
+    </div>` : ''}
+    <div class="section-header"><div class="section-title">All Classes</div></div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Class</th><th>Grade</th><th>Teacher</th><th>Organization</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${myClasses.length ? myClasses.map(c => {
+            const teacher = DB.users.find(u=>u.id===c.teacher);
+            const org = DB.organizations.find(o=>o.id===c.org);
+            return `<tr>
+              <td><strong>${c.name}</strong></td>
+              <td><span class="pill pill-sky">${c.grade}</span></td>
+              <td>${teacher?.name||'—'}</td>
+              <td><span class="org-badge ${c.org==='org_key'?'key':''}">${org?.name||'—'}</span></td>
+              <td><button class="btn btn-violet btn-sm" onclick="manageClass('${c.id}')">Manage</button></td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="es-icon">🏫</div><p>No classes yet.</p></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function createClass() {
+  const name = document.getElementById('newClassName').value;
+  const grade = document.getElementById('newClassGrade').value;
+  if (!name) { showToast('⚠️ Enter a class name'); return; }
+  DB.classes.push({ id:'cls'+Date.now(), name, grade, teacher:currentUser.id, org:currentUser.org, students:[], unlockedContent:[] });
+  showToast('🎓 Class created!');
+  navigate('classes');
+}
+
+function manageClass(id) { showToast('📋 Class management — available in full version'); }
+
+// ---- USERS ----
+function renderUsers(el) {
+  const role = currentUser.role;
+  const users = role==='super_admin'
+    ? DB.users
+    : DB.users.filter(u=>u.org===currentUser.org);
+
+  const pillMap = { super_admin:'pill-coral', tutor:'pill-sky', finance:'pill-sun', org_admin:'pill-violet', teacher:'pill-mint', student:'pill-gray' };
+
+  el.innerHTML = `
+    <div class="page-title">👥 User Management</div>
+    <div class="page-sub">Manage ${users.length} users${role==='super_admin'?' across all organizations':' in your organization'}</div>
+    <div class="form-card" style="margin-bottom:24px;">
+      <h3>Add User</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name</label><input type="text" id="newUserName" placeholder="Full Name"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="newUserEmail" placeholder="email@school.edu"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Role</label>
+          <select id="newUserRole">
+            ${role==='super_admin' ? `
+              <option value="super_admin">Super Admin</option>
+              <option value="tutor">Tutor</option>
+              <option value="finance">Finance</option>` : ''}
+            <option value="org_admin">Org Admin</option>
+            <option value="teacher">Teacher</option>
+            <option value="student">Student</option>
+          </select>
+        </div>
+        ${role==='super_admin' ? `
+        <div class="form-group">
+          <label>Organization</label>
+          <select id="newUserOrg">
+            ${DB.organizations.map(o=>`<option value="${o.id}">${o.name}</option>`).join('')}
+          </select>
+        </div>` : `<div></div>`}
+      </div>
+      <button class="btn btn-sky" onclick="addUser()">Add User →</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>User</th><th>Role</th><th>Organization</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${users.map(u => {
+            const org = DB.organizations.find(o=>o.id===u.org);
+            return `<tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="avatar ${ROLE_COLORS[u.role]||'av-tutor'}" style="width:32px;height:32px;font-size:0.75rem;">${u.avatar}</div>
+                  <div><strong>${u.name}</strong><br><small style="color:var(--muted)">${u.email}</small></div>
+                </div>
+              </td>
+              <td><span class="pill ${pillMap[u.role]||'pill-gray'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+              <td><span class="org-badge ${u.org==='org_key'?'key':''}">${org?.name||'—'}</span></td>
+              <td>
+                <div class="actions-group">
+                  <button class="btn btn-sky btn-sm" onclick="showToast('✏️ Edit user — full version')">Edit</button>
+                  ${u.id!==currentUser.id ? `<button class="btn btn-danger btn-sm" onclick="removeUser('${u.id}')">Remove</button>` : '<span style="font-size:0.75rem;color:var(--muted)">You</span>'}
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function addUser() {
+  const name = document.getElementById('newUserName').value;
+  const email = document.getElementById('newUserEmail').value;
+  const roleVal = document.getElementById('newUserRole').value;
+  const orgEl = document.getElementById('newUserOrg');
+  const org = orgEl ? orgEl.value : currentUser.org;
+  if (!name||!email) { showToast('⚠️ Name and email required'); return; }
+  if (DB.users.find(u=>u.email===email)) { showToast('⚠️ Email already exists'); return; }
+  const av = name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  DB.users.push({ id:'u'+Date.now(), name, email, role:roleVal, org, avatar:av });
+  showToast('✅ User added successfully!');
+  navigate('users');
+}
+
+function removeUser(id) {
+  DB.users = DB.users.filter(u=>u.id!==id);
+  showToast('🗑️ User removed');
+  navigate('users');
+}
+
+// ---- ORGANIZATIONS ----
+function renderOrganizations(el) {
+  el.innerHTML = `
+    <div class="page-title">🏫 Organizations</div>
+    <div class="page-sub">Manage all registered organizations on the platform</div>
+    <div class="form-card" style="margin-bottom:24px;">
+      <h3>Register New Organization</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Organization Name</label><input type="text" id="newOrgName" placeholder="School Name"></div>
+        <div class="form-group"><label>Admin Email</label><input type="email" id="newOrgEmail" placeholder="admin@school.edu"></div>
+      </div>
+      <button class="btn btn-sky" onclick="addOrg()">Register Organization →</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Organization</th><th>Type</th><th>Users</th><th>Content</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${DB.organizations.map(o => {
+            const userCount = DB.users.filter(u=>u.org===o.id).length;
+            const contentCount = DB.content.filter(c=>c.org===o.id).length;
+            return `<tr>
+              <td>
+                <strong>${o.name}</strong>
+                ${o.id==='org_key' ? '<span class="pill pill-sun" style="margin-left:8px;">Platform</span>' : ''}
+              </td>
+              <td><span class="pill ${o.type==='platform'?'pill-coral':'pill-mint'}">${o.type}</span></td>
+              <td>👥 ${userCount}</td>
+              <td>📚 ${contentCount}</td>
+              <td>
+                <div class="actions-group">
+                  <button class="btn btn-sky btn-sm" onclick="showToast('🏫 Org details — full version')">View</button>
+                  ${o.id!=='org_key' ? `<button class="btn btn-danger btn-sm" onclick="removeOrg('${o.id}')">Remove</button>` : ''}
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function addOrg() {
+  const name = document.getElementById('newOrgName').value;
+  const email = document.getElementById('newOrgEmail').value;
+  if (!name) { showToast('⚠️ Organization name required'); return; }
+  const orgId = 'org_' + Date.now();
+  DB.organizations.push({id:orgId, name, slug:name.toLowerCase().replace(/\s/g,'-'), type:'school'});
+  const av = name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  if (email) DB.users.push({id:'u'+Date.now(), name:'Admin of '+name, email, role:'org_admin', org:orgId, avatar:av});
+  showToast('🎉 Organization registered!');
+  navigate('organizations');
+}
+
+function removeOrg(id) {
+  DB.organizations = DB.organizations.filter(o=>o.id!==id);
+  DB.users = DB.users.filter(u=>u.org!==id);
+  DB.content = DB.content.filter(c=>c.org!==id);
+  showToast('🗑️ Organization removed');
+  navigate('organizations');
+}
+
+// ---- PROFILE ----
+function renderProfile(el) {
+  const org = DB.organizations.find(o=>o.id===currentUser.org);
+  el.innerHTML = `
+    <div class="page-title">⚙️ Profile & Settings</div>
+    <div class="page-sub">Manage your account</div>
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+        <div class="avatar ${ROLE_COLORS[currentUser.role]} " style="width:64px;height:64px;font-size:1.4rem;">${currentUser.avatar}</div>
+        <div>
+          <div style="font-family:'Fredoka One',cursive;font-size:1.4rem;font-weight:800;">${currentUser.name}</div>
+          <div style="color:var(--muted);font-size:0.9rem;">${currentUser.email}</div>
+          <span class="pill pill-sky" style="margin-top:4px;display:inline-block;">${ROLE_LABELS[currentUser.role]}</span>
+          <span class="org-badge ${currentUser.org==='org_key'?'key':''}" style="margin-left:6px;">${org?.name||'—'}</span>
+        </div>
+      </div>
+      <div class="form-group"><label>Display Name</label><input type="text" value="${currentUser.name}"></div>
+      <div class="form-group"><label>Email</label><input type="email" value="${currentUser.email}"></div>
+      <div class="form-group"><label>New Password</label><input type="password" placeholder="Leave blank to keep current"></div>
+      <button class="btn btn-sky" onclick="showToast('✅ Profile updated!')">Save Changes</button>
+      <button class="btn btn-danger" style="margin-left:12px;" onclick="logout()">Sign Out</button>
+    </div>
+  `;
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(tab) {
+  document.getElementById('authModal').classList.add('open');
+  switchTab(tab);
+}
+function closeModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+function switchTab(tab) {
+  document.getElementById('loginForm').style.display = tab==='login' ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? '' : 'none';
+}
+
+// Click outside to close
+document.getElementById('authModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('authModal')) closeModal();
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

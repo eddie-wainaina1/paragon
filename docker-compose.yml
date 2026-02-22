@@ -1,0 +1,139 @@
+name: nifty
+
+# ════════════════════════════════════════════════════════════════════════════
+#  Services
+#  ┌──────────┐     ┌──────────┐     ┌───────────┐     ┌───────┐
+#  │ frontend │────►│ backend  │────►│  mongodb  │     │ redis │
+#  │  :3000   │     │  :8000   │     │  :27017   │     │ :6379 │
+#  └──────────┘     └──────────┘     └───────────┘     └───────┘
+#
+#  All services share the "nifty-net" bridge network.
+#  Persistent data lives in named volumes: mongodb_data, redis_data.
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: nifty-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      # Remove MONGO_INITDB_ROOT_* to run without auth (dev-friendly).
+      # Add credentials here and update MONGODB_URI in backend for production.
+      MONGO_INITDB_DATABASE: nifty
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - nifty-net
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nifty-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - nifty-net
+
+  # ── FastAPI Backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./niftyb
+      dockerfile: Dockerfile
+    container_name: nifty-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/nifty
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-min-32-chars}
+      APP_ENV: ${APP_ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      OTEL_SERVICE_NAME: nifty-backend
+      OTEL_EXPORTER: ${OTEL_EXPORTER:-console}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318}
+      CORS_ORIGINS: http://localhost:3000,http://frontend:80
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - nifty-net
+
+  # ── React Frontend ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./nifty
+      dockerfile: Dockerfile
+      args:
+        # Baked in at build time by Vite; nginx proxies /api → backend service
+        VITE_API_URL: /api/v1
+    container_name: nifty-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      # Runtime variable used by the nginx template to proxy /api → backend
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/index.html"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nifty-net
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  Volumes — named, persist across container restarts
+# ════════════════════════════════════════════════════════════════════════════
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  Network — all services on one bridge; only exposed ports reach the host
+# ════════════════════════════════════════════════════════════════════════════
+networks:
+  nifty-net:
+    driver: bridge

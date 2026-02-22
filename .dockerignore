@@ -1,0 +1,28 @@
+# Root-level .dockerignore — used by the combined Dockerfile
+# (build context is the paragon/ directory)
+
+# Frontend build artifacts
+nifty/node_modules
+nifty/dist
+nifty/.env
+nifty/.env.*
+nifty/*.log
+nifty/.vite
+
+# Backend artifacts
+niftyb/.env
+niftyb/.env.*
+niftyb/__pycache__
+niftyb/**/__pycache__
+niftyb/**/*.pyc
+niftyb/**/*.pyo
+niftyb/.pytest_cache
+niftyb/.mypy_cache
+niftyb/*.log
+
+# Repo metadata
+.git
+.gitignore
+*.md
+*.html
+.DS_Store
