@@ -1,15 +1,14 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
-
-ROLES = ["super_admin", "tutor", "finance", "org_admin", "teacher", "student"]
+from app.constants import Role
 
 
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
     password: str = Field(..., min_length=6)
-    role: str = Field(..., pattern="^(super_admin|tutor|finance|org_admin|teacher|student)$")
+    role: str = Field(..., pattern=Role.pattern())
     org_id: str
 
 
@@ -17,7 +16,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=6)
-    role: Optional[str] = Field(None, pattern="^(super_admin|tutor|finance|org_admin|teacher|student)$")
+    role: Optional[str] = Field(None, pattern=Role.pattern())
 
 
 class UserOut(BaseModel):

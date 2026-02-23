@@ -1,35 +1,58 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from bson import ObjectId
-import mongoengine as me
+from typing import Optional
+
+from mongoengine import Q, Document, StringField, ReferenceField, ObjectIdField, IntField, BooleanField, DateTimeField
 from app.models.organization import Organization
 from app.models.user import User
-
-CONTENT_TYPES = ["text", "video", "audio"]
-CONTENT_SCOPES = ["global", "org"]
-EMOJI_MAP = {"text": "📄", "video": "🎬", "audio": "🎧"}
+from app.constants import ContentType, ContentScope, ContentEmoji, Role
 
 
-class Content(me.Document):
+class Content(Document):
     meta = {
         "collection": "content",
         "indexes": ["org", "author", "scope", "type"],
     }
 
-    title = me.StringField(required=True, max_length=300)
-    type = me.StringField(required=True, choices=CONTENT_TYPES)
-    scope = me.StringField(required=True, choices=CONTENT_SCOPES, default="org")
-    org = me.ReferenceField(Organization, required=True)
-    author = me.ReferenceField(User, required=True)
-    subject = me.StringField(max_length=200)
-    body = me.StringField()  # text content or URL
-    file_id = me.ObjectIdField()  # GridFS reference for uploaded files
-    file_name = me.StringField()
-    file_content_type = me.StringField()
-    views = me.IntField(default=0, min_value=0)
-    locked = me.BooleanField(default=False)
-    emoji = me.StringField(max_length=10)
-    created_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
-    updated_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    title = StringField(required=True, max_length=300)
+    type = StringField(required=True, choices=ContentType.values())
+    scope = StringField(required=True, choices=ContentScope.values(), default=ContentScope.org)
+    org = ReferenceField(Organization, required=True)
+    author = ReferenceField(User, required=True)
+    subject = StringField(max_length=200)
+    body = StringField()  # text content or URL
+    file_id = ObjectIdField()  # GridFS reference for uploaded files
+    file_name = StringField()
+    file_content_type = StringField()
+    views = IntField(default=0, min_value=0)
+    locked = BooleanField(default=False)
+    emoji = StringField(max_length=10)
+    created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
+    updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
+
+    # ── Queries ──────────────────────────────────────────────────────────────
+
+    @classmethod
+    def get_by_id(cls, content_id: str) -> Optional[Content]:
+        return cls.objects(id=content_id).first()
+
+    @classmethod
+    def list_visible_to(cls, user):
+        """Return a queryset of content visible to *user* based on role and org."""
+        if user.role == Role.super_admin:
+            return cls.objects()
+        return cls.objects(Q(scope=ContentScope.global_scope) | Q(org=user.org))
+
+    @classmethod
+    def increment_views(cls, content_id: str) -> None:
+        cls.objects(id=content_id).update_one(inc__views=1)
+
+    @classmethod
+    def delete_by_org(cls, org) -> None:
+        cls.objects(org=org).delete()
+
+    # ── Serialisation ────────────────────────────────────────────────────────
 
     def to_dict(self) -> dict:
         return {
@@ -48,7 +71,8 @@ class Content(me.Document):
             "file_content_type": self.file_content_type,
             "views": self.views,
             "locked": self.locked,
-            "emoji": self.emoji or EMOJI_MAP.get(self.type, "📄"),
+            "emoji": self.emoji
+            or ContentEmoji.to_dict().get(self.type, ContentEmoji.text),
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

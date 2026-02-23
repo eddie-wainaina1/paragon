@@ -29,8 +29,9 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Runtime variable — override to point at the backend service
-ENV BACKEND_URL=http://backend:8000
+# Runtime variables — override at container start without rebuilding
+ENV BACKEND_URL=http://backend:8000 \
+    MAX_BODY_SIZE=0
 
 EXPOSE 80
 

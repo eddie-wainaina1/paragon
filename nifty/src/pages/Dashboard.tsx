@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Button, Skeleton } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent, Button, Chip, Skeleton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -9,7 +9,7 @@ import { orgsApi } from '@/api/organizations';
 import { classesApi } from '@/api/classes';
 import ContentCard from '@/components/Content/ContentCard';
 import ContentViewDialog from '@/components/Content/ContentViewDialog';
-import { ROLE_LABELS } from '@/types';
+import { Role } from '@/constants';
 
 interface StatCardProps {
   icon: string;
@@ -49,28 +49,63 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
   );
 }
 
+function ClassCard({ cls, action }: { cls: import('@/types').Class; action?: React.ReactNode }) {
+  return (
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ flex: 1, pb: '12px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+          <Typography fontWeight={700} fontSize="0.95rem" lineHeight={1.3}>
+            {cls.name}
+          </Typography>
+          {cls.grade && (
+            <Chip label={cls.grade} size="small" sx={{ fontSize: '0.72rem', fontWeight: 700, ml: 1, flexShrink: 0 }} />
+          )}
+        </Box>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+          {cls.teacher_name ?? 'Unknown teacher'}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {cls.unlocked_content_count} lesson{cls.unlocked_content_count !== 1 ? 's' : ''} · {cls.student_count} student{cls.student_count !== 1 ? 's' : ''}
+        </Typography>
+        {action && <Box sx={{ mt: 1.5 }}>{action}</Box>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const isStudent = user?.role === Role.student;
+  const isSuperAdmin = user?.role === Role.super_admin;
 
   const { data: contentList = [], isLoading: contentLoading } = useQuery({
     queryKey: ['content'],
     queryFn: () => contentApi.list(),
+    enabled: !isStudent,
   });
 
   const { data: usersList = [] } = useQuery({
     queryKey: ['users'],
     queryFn: () => usersApi.list(),
+    enabled: !isStudent,
   });
 
   const { data: orgsList = [] } = useQuery({
     queryKey: ['organizations'],
     queryFn: () => orgsApi.list(),
+    enabled: isSuperAdmin,
   });
 
-  const { data: classesList = [] } = useQuery({
+  const { data: enrolledClasses = [], isLoading: enrolledLoading } = useQuery({
     queryKey: ['classes'],
     queryFn: () => classesApi.list(),
+  });
+
+  const { data: availableClasses = [], isLoading: availableLoading } = useQuery({
+    queryKey: ['classes', 'available'],
+    queryFn: () => classesApi.listAvailable(),
+    enabled: isStudent,
   });
 
   const [viewingId, setViewingId] = useState<string | null>(null);
@@ -79,39 +114,143 @@ export default function Dashboard() {
 
   const recentContent = contentList.slice(0, 4);
 
+  const WelcomeBanner = (
+    <Box
+      sx={{
+        background: 'linear-gradient(135deg,#F97316 0%,#EA580C 60%,#92400E 100%)',
+        borderRadius: 3,
+        p: { xs: '20px 20px', md: '28px 32px' },
+        color: '#fff',
+        mb: 3.5,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::after': {
+          content: '"🚀"',
+          position: 'absolute',
+          right: 28,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '4rem',
+          opacity: 0.2,
+        },
+      }}
+    >
+      <Typography
+        variant="h4"
+        sx={{ color: '#fff', mb: 0.5, fontFamily: "'Fredoka One', cursive" }}
+      >
+        Hello, {user.name.split(' ')[0]}! 👋
+      </Typography>
+      <Typography sx={{ opacity: 0.9, fontSize: '0.95rem' }}>
+        Welcome to Nifty by Paragon — {user.org_name} · {Role.to_dict()[user.role]}
+      </Typography>
+    </Box>
+  );
+
+  // ── Student view ────────────────────────────────────────────────────────────
+  if (isStudent) {
+    return (
+      <Box>
+        {WelcomeBanner}
+
+        {/* Stats */}
+        <Grid container spacing={2} sx={{ mb: 3.5 }}>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <StatCard icon="🔓" value={availableLoading ? '…' : availableClasses.length} label="Available Classes" color="#22C55E" />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <StatCard icon="🎓" value={enrolledLoading ? '…' : enrolledClasses.length} label="My Classes" color="#F97316" />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 4 }}>
+            <StatCard icon="✅" value={0} label="Completed" color="#FACC15" />
+          </Grid>
+        </Grid>
+
+        {/* Enrolled classes */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem' }}>
+            🎓 My Classes
+          </Typography>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => navigate('/app/classes')}
+            sx={{ borderRadius: 50, fontSize: '0.82rem', px: 2, py: 0.75 }}
+          >
+            View All
+          </Button>
+        </Box>
+        <Grid container spacing={2.5} sx={{ mb: 4 }}>
+          {enrolledLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 2 }} />
+              </Grid>
+            ))
+            : enrolledClasses.length === 0
+              ? (
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>📭</Typography>
+                    <Typography>You haven't joined any classes yet.</Typography>
+                  </Box>
+                </Grid>
+              )
+              : enrolledClasses.slice(0, 3).map((c) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
+                  <ClassCard cls={c} />
+                </Grid>
+              ))}
+        </Grid>
+
+        {/* Available classes */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem' }}>
+            🔓 Available Classes
+          </Typography>
+        </Box>
+        <Grid container spacing={2.5}>
+          {availableLoading
+            ? Array.from({ length: 3 }).map((_, i) => (
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: 2 }} />
+              </Grid>
+            ))
+            : availableClasses.length === 0
+              ? (
+                <Grid size={{ xs: 12 }}>
+                  <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>🎉</Typography>
+                    <Typography>You're enrolled in all available classes!</Typography>
+                  </Box>
+                </Grid>
+              )
+              : availableClasses.slice(0, 6).map((c) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
+                  <ClassCard
+                    cls={c}
+                    action={
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => navigate('/app/classes')}
+                        sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                      >
+                        Join Class
+                      </Button>
+                    }
+                  />
+                </Grid>
+              ))}
+        </Grid>
+      </Box>
+    );
+  }
+
+  // ── Admin / teacher / other view ────────────────────────────────────────────
   return (
     <Box>
-      {/* Welcome banner */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg,#F97316 0%,#EA580C 60%,#92400E 100%)',
-          borderRadius: 3,
-          p: { xs: '20px 20px', md: '28px 32px' },
-          color: '#fff',
-          mb: 3.5,
-          position: 'relative',
-          overflow: 'hidden',
-          '&::after': {
-            content: '"🚀"',
-            position: 'absolute',
-            right: 28,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            fontSize: '4rem',
-            opacity: 0.2,
-          },
-        }}
-      >
-        <Typography
-          variant="h4"
-          sx={{ color: '#fff', mb: 0.5, fontFamily: "'Fredoka One', cursive" }}
-        >
-          Hello, {user.name.split(' ')[0]}! 👋
-        </Typography>
-        <Typography sx={{ opacity: 0.9, fontSize: '0.95rem' }}>
-          Welcome to Nifty by Paragon — {user.org_name} · {ROLE_LABELS[user.role]}
-        </Typography>
-      </Box>
+      {WelcomeBanner}
 
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3.5 }}>
@@ -121,11 +260,13 @@ export default function Dashboard() {
         <Grid size={{ xs: 6, sm: 3 }}>
           <StatCard icon="👥" value={usersList.length} label="Users" color="#EA580C" />
         </Grid>
+        {isSuperAdmin && (
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <StatCard icon="🏫" value={orgsList.length} label="Organizations" color="#22C55E" />
+          </Grid>
+        )}
         <Grid size={{ xs: 6, sm: 3 }}>
-          <StatCard icon="🏫" value={orgsList.length} label="Organizations" color="#22C55E" />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <StatCard icon="🎓" value={classesList.length} label="Classes" color="#FACC15" />
+          <StatCard icon="🎓" value={enrolledClasses.length} label="Classes" color="#FACC15" />
         </Grid>
       </Grid>
 
@@ -149,15 +290,15 @@ export default function Dashboard() {
       <Grid container spacing={2.5}>
         {contentLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
-                <Skeleton variant="rounded" height={200} sx={{ borderRadius: 2 }} />
-              </Grid>
-            ))
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
+              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 2 }} />
+            </Grid>
+          ))
           : recentContent.map((c) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={c.id}>
-                <ContentCard content={c} onClick={(c) => setViewingId(c.id)} />
-              </Grid>
-            ))}
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={c.id}>
+              <ContentCard content={c} onClick={(c) => setViewingId(c.id)} />
+            </Grid>
+          ))}
         {!contentLoading && recentContent.length === 0 && (
           <Grid size={{ xs: 12 }}>
             <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>

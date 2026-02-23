@@ -1,11 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from app.constants import ClassScope
 
 
 class ClassCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     grade: Optional[str] = Field(None, max_length=100)
+    scope: Optional[str] = Field(ClassScope.org, pattern=ClassScope.pattern())
 
 
 class ClassUpdate(BaseModel):
@@ -17,6 +19,7 @@ class ClassOut(BaseModel):
     id: str
     name: str
     grade: Optional[str]
+    scope: str = ClassScope.org
     teacher: str
     teacher_name: Optional[str]
     org: str
@@ -36,3 +39,7 @@ class ClassDetailOut(ClassOut):
 
 class AddStudentRequest(BaseModel):
     user_id: str
+
+
+class AddContentRequest(BaseModel):
+    content_id: str

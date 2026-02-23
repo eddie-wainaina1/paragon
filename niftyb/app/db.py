@@ -1,6 +1,5 @@
-"""MongoDB connection via MongoEngine + GridFS bucket."""
+"""MongoDB connection via MongoEngine + GridFS helpers."""
 import logging
-from gridfs import GridIn
 from pymongo import MongoClient
 from pymongo.database import Database
 import gridfs
@@ -47,3 +46,24 @@ def get_raw_db() -> Database:
     if _db is None:
         raise RuntimeError("DB not initialised — call connect_db() first")
     return _db
+
+
+# ── GridFS helpers (used by routers instead of accessing fs directly) ─────────
+
+
+def gridfs_put(file_data: bytes, filename: str, content_type: str):
+    """Write *file_data* to GridFS and return the new ObjectId."""
+    return get_gridfs().put(file_data, filename=filename, content_type=content_type)
+
+
+def gridfs_get(file_id) -> gridfs.GridOut:
+    """Return the GridOut object for *file_id*."""
+    return get_gridfs().get(file_id)
+
+
+def gridfs_delete(file_id) -> None:
+    """Delete the GridFS file identified by *file_id*, silently ignoring missing files."""
+    try:
+        get_gridfs().delete(file_id)
+    except Exception:
+        pass

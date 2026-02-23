@@ -13,16 +13,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { usersApi } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
-import { ROLE_LABELS } from '@/types';
-
-const ROLE_AVATAR_BG: Record<string, string> = {
-  super_admin: 'linear-gradient(135deg,#F97316,#EA580C)',
-  tutor: 'linear-gradient(135deg,#F97316,#FACC15)',
-  finance: 'linear-gradient(135deg,#FACC15,#F97316)',
-  org_admin: 'linear-gradient(135deg,#EA580C,#C2410C)',
-  teacher: 'linear-gradient(135deg,#22C55E,#F97316)',
-  student: 'linear-gradient(135deg,#F97316,#FBBF24)',
-};
+import { Role, RoleStyle } from '@/constants';
 
 export default function Profile() {
   const { user, setAuth, clearAuth } = useAuthStore();
@@ -87,7 +78,7 @@ export default function Profile() {
                 height: 64,
                 fontSize: '1.4rem',
                 fontWeight: 800,
-                background: ROLE_AVATAR_BG[user.role] ?? ROLE_AVATAR_BG.student,
+                background: RoleStyle.avatar_bg[user.role] ?? RoleStyle.avatar_bg.student,
               }}
             >
               {user.avatar}
@@ -106,7 +97,7 @@ export default function Profile() {
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                 <Chip
-                  label={ROLE_LABELS[user.role]}
+                  label={Role.to_dict()[user.role]}
                   size="small"
                   sx={{ background: '#FFEDD5', color: '#C2410C', fontWeight: 700 }}
                 />

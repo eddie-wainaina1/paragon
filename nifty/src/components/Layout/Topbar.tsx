@@ -6,11 +6,13 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  Button,
 } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { ROLE_LABELS } from '@/types';
+import { Role } from '@/constants';
 
 const ROLE_AVATAR_COLORS: Record<string, string> = {
   super_admin: 'linear-gradient(135deg,#F97316,#EA580C)',
@@ -22,13 +24,19 @@ const ROLE_AVATAR_COLORS: Record<string, string> = {
 };
 
 export default function Topbar() {
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, isImpersonating, stopImpersonating, originalUser } = useAuthStore();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
   const handleLogout = () => {
     clearAuth();
     window.location.href = '/';
+  };
+
+  const handleStopImpersonating = () => {
+    stopImpersonating();
+    navigate('/app/users');
   };
 
   return (
@@ -43,6 +51,47 @@ export default function Topbar() {
         zIndex: 100,
       }}
     >
+      {isImpersonating() && (
+        <Box
+          sx={{
+            background: 'linear-gradient(90deg,#F97316,#EA580C)',
+            color: '#fff',
+            px: 3,
+            py: 0.75,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            fontSize: '0.85rem',
+            fontWeight: 700,
+          }}
+        >
+          <Typography fontSize="inherit" fontWeight="inherit">
+            Viewing as <strong>{user.name}</strong> &middot; {Role.to_dict()[user.role]}
+            {originalUser && (
+              <Box component="span" sx={{ fontWeight: 400, ml: 1, opacity: 0.85 }}>
+                (you are {originalUser.name})
+              </Box>
+            )}
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleStopImpersonating}
+            sx={{
+              color: '#fff',
+              borderColor: 'rgba(255,255,255,0.6)',
+              borderRadius: 50,
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              py: 0.25,
+              '&:hover': { borderColor: '#fff', background: 'rgba(255,255,255,0.15)' },
+            }}
+          >
+            Stop Impersonating
+          </Button>
+        </Box>
+      )}
       <Toolbar sx={{ px: { xs: 2, sm: 3 }, gap: 2 }}>
         {/* Logo */}
         <Typography
@@ -73,7 +122,7 @@ export default function Topbar() {
             {user.name}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {ROLE_LABELS[user.role]}
+            {Role.to_dict()[user.role]}
           </Typography>
         </Box>
 

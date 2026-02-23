@@ -12,12 +12,46 @@ from app.config import settings
 from app.db import connect_db, disconnect_db
 from app.telemetry import setup_telemetry
 from app.routers import auth, users, organizations, content, classes
+from app.utils.security import hash_password
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+def _seed_platform() -> None:
+    """Ensure the internal 'nifty' organization and its super_admin exist."""
+    from app.models.organization import Organization
+    from app.models.user import User
+
+    org = Organization.objects(slug="nifty").first()
+    if not org:
+        org = Organization(
+            name="Nifty",
+            slug="nifty",
+            type="platform",
+            internal=True,
+        )
+        org.save()
+        logger.info("Platform org 'nifty' created")
+
+    # Ensure the org is marked internal (idempotent fix for existing data)
+    if not org.internal:
+        org.internal = True
+        org.save()
+
+    if not User.objects(email=settings.superadmin_email).first():
+        admin = User(
+            name="Super Admin",
+            email=settings.superadmin_email,
+            password_hash=hash_password(settings.superadmin_password),
+            role="super_admin",
+            org=org,
+            avatar="SA",
+        )
+        admin.save()
+        logger.info("Seed super_admin created", extra={"email": settings.superadmin_email})
 
 
 @asynccontextmanager
@@ -27,6 +61,7 @@ async def lifespan(app: FastAPI):
     PymongoInstrumentor().instrument()
     RedisInstrumentor().instrument()
     connect_db()
+    _seed_platform()
     logger.info("Nifty backend started", extra={"env": settings.app_env})
     yield
     # ── Shutdown ─────────────────────────────────────────────────────────────

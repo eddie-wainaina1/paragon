@@ -4,17 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import ContentCard from '@/components/Content/ContentCard';
 import ContentViewDialog from '@/components/Content/ContentViewDialog';
+import { ContentFilters } from '@/constants';
 import type { ContentType, ContentScope } from '@/types';
 
 type Filter = 'all' | ContentType | ContentScope;
-
-const FILTERS: { value: Filter; label: string; bg: string; color: string }[] = [
-  { value: 'all', label: 'All', bg: '#F97316', color: '#fff' },
-  { value: 'text', label: '📝 Text', bg: '#DBEAFE', color: '#1D4ED8' },
-  { value: 'video', label: '🎬 Video', bg: '#FCE7F3', color: '#BE185D' },
-  { value: 'audio', label: '🎧 Audio', bg: '#D1FAE5', color: '#065F46' },
-  { value: 'global', label: '🌍 Global', bg: '#FEF3C7', color: '#92400E' },
-];
 
 export default function ContentLibrary() {
   const [filter, setFilter] = useState<Filter>('all');
@@ -24,8 +17,8 @@ export default function ContentLibrary() {
     filter === 'all'
       ? {}
       : filter === 'global'
-      ? { scope: 'global' as ContentScope }
-      : { type: filter as ContentType };
+        ? { scope: 'global' as ContentScope }
+        : { type: filter as ContentType };
 
   const { data: contentList = [], isLoading } = useQuery({
     queryKey: ['content', queryParams],
@@ -43,7 +36,7 @@ export default function ContentLibrary() {
 
       {/* Filter bar */}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-        {FILTERS.map((f) => (
+        {ContentFilters.map((f) => (
           <Button
             key={f.value}
             size="small"
@@ -69,15 +62,15 @@ export default function ContentLibrary() {
       <Grid container spacing={2.5}>
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-                <Skeleton variant="rounded" height={200} sx={{ borderRadius: 2 }} />
-              </Grid>
-            ))
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 2 }} />
+            </Grid>
+          ))
           : contentList.map((c) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
-                <ContentCard content={c} onClick={(c) => setViewingId(c.id)} />
-              </Grid>
-            ))}
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
+              <ContentCard content={c} onClick={(c) => setViewingId(c.id)} />
+            </Grid>
+          ))}
         {!isLoading && contentList.length === 0 && (
           <Grid size={{ xs: 12 }}>
             <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>

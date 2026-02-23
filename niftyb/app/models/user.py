@@ -1,23 +1,57 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
-import mongoengine as me
+from typing import Optional
+from mongoengine import Document, StringField, EmailField, ReferenceField, DateTimeField
 from app.models.organization import Organization
+from app.constants import Role
 
-ROLES = ["super_admin", "tutor", "finance", "org_admin", "teacher", "student"]
 
-
-class User(me.Document):
+class User(Document):
     meta = {
         "collection": "users",
         "indexes": ["email", "org"],
     }
 
-    name = me.StringField(required=True, max_length=200)
-    email = me.EmailField(required=True, unique=True)
-    password_hash = me.StringField(required=True)
-    role = me.StringField(required=True, choices=ROLES)
-    org = me.ReferenceField(Organization, required=True)
-    avatar = me.StringField(max_length=4, default="?")  # initials
-    created_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    name = StringField(required=True, max_length=200)
+    email = EmailField(required=True, unique=True)
+    password_hash = StringField(required=True)
+    role = StringField(required=True, choices=Role.values())
+    org = ReferenceField(Organization, required=True)
+    avatar = StringField(max_length=4, default="?")  # initials
+    created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
+
+    # ── Queries ──────────────────────────────────────────────────────────────
+
+    @classmethod
+    def get_by_id(cls, user_id: str) -> Optional[User]:
+        return cls.objects(id=user_id).first()
+
+    @classmethod
+    def get_by_email(cls, email: str) -> Optional[User]:
+        return cls.objects(email=email).first()
+
+    @classmethod
+    def email_exists(cls, email: str, exclude_id: str | None = None) -> bool:
+        """True if a user with *email* already exists (optionally ignoring *exclude_id*)."""
+        qs = cls.objects(email=email)
+        if exclude_id:
+            qs = qs.filter(id__ne=exclude_id)
+        return qs.first() is not None
+
+    @classmethod
+    def list_all(cls):
+        return cls.objects()
+
+    @classmethod
+    def list_by_org(cls, org):
+        return cls.objects(org=org)
+
+    @classmethod
+    def delete_by_org(cls, org) -> None:
+        cls.objects(org=org).delete()
+
+    # ── Serialisation ────────────────────────────────────────────────────────
 
     def to_dict(self) -> dict:
         return {

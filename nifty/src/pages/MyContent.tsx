@@ -25,13 +25,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
+import { ContentTypeStyle, Role } from '@/constants';
 import type { Content, ContentType, ContentScope } from '@/types';
-
-const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  text: { bg: '#DBEAFE', color: '#1D4ED8' },
-  video: { bg: '#FCE7F3', color: '#BE185D' },
-  audio: { bg: '#D1FAE5', color: '#065F46' },
-};
 
 interface EditDialogProps {
   content: Content | null;
@@ -147,7 +142,7 @@ export default function MyContent() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [editingContent, setEditingContent] = useState<Content | null>(null);
-  const canGlobal = user?.role === 'super_admin' || user?.role === 'tutor';
+  const canGlobal = Role.global_scope.includes(user?.role as never);
 
   const { data: all = [], isLoading } = useQuery({
     queryKey: ['content'],
@@ -205,7 +200,7 @@ export default function MyContent() {
               </TableRow>
             ) : (
               mine.map((c) => {
-                const tc = TYPE_COLORS[c.type] ?? TYPE_COLORS.text;
+                const tc = ContentTypeStyle.chip[c.type] ?? ContentTypeStyle.chip.text;
                 return (
                   <TableRow key={c.id}>
                     <TableCell>

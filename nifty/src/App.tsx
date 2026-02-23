@@ -7,6 +7,7 @@ import ContentLibrary from '@/pages/ContentLibrary';
 import CreateContent from '@/pages/CreateContent';
 import MyContent from '@/pages/MyContent';
 import Classes from '@/pages/Classes';
+import ClassDetail from '@/pages/ClassDetail';
 import Users from '@/pages/Users';
 import Organizations from '@/pages/Organizations';
 import Profile from '@/pages/Profile';
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="content/create" element={<CreateContent />} />
         <Route path="my-content" element={<MyContent />} />
         <Route path="classes" element={<Classes />} />
+        <Route path="classes/:id" element={<ClassDetail />} />
         <Route path="users" element={<Users />} />
         <Route path="organizations" element={<Organizations />} />
         <Route path="profile" element={<Profile />} />

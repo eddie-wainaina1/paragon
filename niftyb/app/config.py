@@ -23,6 +23,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
+    # Seed super-admin credentials (created once on first startup if absent)
+    superadmin_email: str = "admin@nifty.internal"
+    superadmin_password: str = "change-me-in-production"
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

@@ -2,6 +2,9 @@ server {
     listen 80;
     server_name _;
 
+    # 0 = no limit (default). Set MAX_BODY_SIZE (e.g. 100m) to cap upload size.
+    client_max_body_size ${MAX_BODY_SIZE};
+
     root /usr/share/nginx/html;
     index index.html;
 
@@ -23,13 +26,14 @@ server {
 
     # ── API proxy → backend ───────────────────────────────────────────────────
     location /api/ {
-        proxy_pass          ${BACKEND_URL}/api/;
-        proxy_http_version  1.1;
-        proxy_set_header    Host              $host;
-        proxy_set_header    X-Real-IP         $remote_addr;
-        proxy_set_header    X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header    X-Forwarded-Proto $scheme;
-        proxy_read_timeout  60s;
+        proxy_pass              ${BACKEND_URL}/api/;
+        proxy_http_version      1.1;
+        proxy_set_header        Host              $host;
+        proxy_set_header        X-Real-IP         $remote_addr;
+        proxy_set_header        X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto $scheme;
+        proxy_read_timeout      60s;
+        proxy_request_buffering off;
     }
 
     # ── SPA fallback — all other routes → index.html ─────────────────────────

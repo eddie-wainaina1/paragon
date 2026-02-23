@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -24,36 +25,20 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/api/users';
 import { orgsApi } from '@/api/organizations';
+import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
-import { ROLE_LABELS } from '@/types';
-import type { Role } from '@/types';
-
-const ROLE_AVATAR_BG: Record<string, string> = {
-  super_admin: 'linear-gradient(135deg,#F97316,#EA580C)',
-  tutor: 'linear-gradient(135deg,#F97316,#FACC15)',
-  finance: 'linear-gradient(135deg,#FACC15,#F97316)',
-  org_admin: 'linear-gradient(135deg,#EA580C,#C2410C)',
-  teacher: 'linear-gradient(135deg,#22C55E,#F97316)',
-  student: 'linear-gradient(135deg,#F97316,#FBBF24)',
-};
-
-const ROLE_CHIP: Record<string, { bg: string; color: string }> = {
-  super_admin: { bg: '#FEE2E2', color: '#991B1B' },
-  tutor: { bg: '#FFEDD5', color: '#C2410C' },
-  finance: { bg: '#FEF3C7', color: '#92400E' },
-  org_admin: { bg: '#EDE9FE', color: '#5B21B6' },
-  teacher: { bg: '#D1FAE5', color: '#065F46' },
-  student: { bg: '#F1F5F9', color: '#475569' },
-};
+import { Role, RoleStyle } from '@/constants';
+import type { Role as RoleType } from '@/types';
 
 export default function Users() {
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser, impersonate } = useAuthStore();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const isSuperAdmin = currentUser?.role === Role.super_admin;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('teacher');
+  const [role, setRole] = useState<RoleType>('teacher');
   const [orgId, setOrgId] = useState('');
   const [error, setError] = useState('');
 
@@ -96,6 +81,20 @@ export default function Users() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
+  const impersonateMutation = useMutation({
+    mutationFn: (userId: string) => authApi.impersonate(userId),
+    onSuccess: (data) => {
+      impersonate(data.user, data.access_token);
+      navigate('/app/dashboard');
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Failed to impersonate user';
+      setError(msg);
+    },
+  });
+
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) {
@@ -110,9 +109,7 @@ export default function Users() {
     createMutation.mutate();
   };
 
-  const roleOptions: Role[] = isSuperAdmin
-    ? ['super_admin', 'tutor', 'finance', 'org_admin', 'teacher', 'student']
-    : ['org_admin', 'teacher', 'student'];
+  const roleOptions = isSuperAdmin ? Role.all : Role.org_roles;
 
   return (
     <Box>
@@ -158,11 +155,11 @@ export default function Users() {
               <Select
                 value={role}
                 label="Role"
-                onChange={(e) => setRole(e.target.value as Role)}
+                onChange={(e) => setRole(e.target.value as RoleType)}
               >
                 {roleOptions.map((r) => (
                   <MenuItem key={r} value={r}>
-                    {ROLE_LABELS[r]}
+                    {Role.to_dict()[r]}
                   </MenuItem>
                 ))}
               </Select>
@@ -222,8 +219,9 @@ export default function Users() {
               ))
             ) : (
               users.map((u) => {
-                const rc = ROLE_CHIP[u.role] ?? ROLE_CHIP.student;
+                const rc = RoleStyle.chip[u.role] ?? RoleStyle.chip.student;
                 const isMe = u.id === currentUser?.id;
+                const canImpersonate = isSuperAdmin && !isMe && u.role !== Role.super_admin;
                 return (
                   <TableRow key={u.id}>
                     <TableCell>
@@ -234,7 +232,7 @@ export default function Users() {
                             height: 32,
                             fontSize: '0.75rem',
                             fontWeight: 800,
-                            background: ROLE_AVATAR_BG[u.role] ?? ROLE_AVATAR_BG.student,
+                            background: RoleStyle.avatar_bg[u.role] ?? RoleStyle.avatar_bg.student,
                           }}
                         >
                           {u.avatar}
@@ -251,7 +249,7 @@ export default function Users() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={ROLE_LABELS[u.role]}
+                        label={Role.to_dict()[u.role]}
                         size="small"
                         sx={{ background: rc.bg, color: rc.color, fontWeight: 700 }}
                       />
@@ -270,16 +268,29 @@ export default function Users() {
                           You
                         </Typography>
                       ) : (
-                        <Button
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                          sx={{ borderRadius: 50, fontSize: '0.78rem' }}
-                          onClick={() => deleteMutation.mutate(u.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          Remove
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {canImpersonate && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                              onClick={() => impersonateMutation.mutate(u.id)}
+                              disabled={impersonateMutation.isPending}
+                            >
+                              Impersonate
+                            </Button>
+                          )}
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                            onClick={() => deleteMutation.mutate(u.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            Remove
+                          </Button>
+                        </Box>
                       )}
                     </TableCell>
                   </TableRow>

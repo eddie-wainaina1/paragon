@@ -15,6 +15,7 @@ export interface Organization {
   name: string;
   slug: string;
   type: OrgType;
+  internal: boolean;
   created_at: string;
   admin_temp_password?: string;
 }
@@ -51,10 +52,13 @@ export interface Content {
   updated_at: string;
 }
 
+export type ClassScope = 'global' | 'org';
+
 export interface Class {
   id: string;
   name: string;
   grade?: string;
+  scope: ClassScope;
   teacher: string;
   teacher_name?: string;
   org: string;
@@ -105,17 +109,7 @@ export interface ContentCreate {
 export interface ClassCreate {
   name: string;
   grade?: string;
+  scope?: ClassScope;
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
-  super_admin: 'Super Admin',
-  tutor: 'Tutor',
-  finance: 'Finance',
-  org_admin: 'Org Admin',
-  teacher: 'Teacher',
-  student: 'Student',
-};
-
-export const CREATOR_ROLES: Role[] = ['super_admin', 'tutor', 'org_admin', 'teacher'];
-export const ADMIN_ROLES: Role[] = ['super_admin', 'org_admin'];
-export const MANAGER_ROLES: Role[] = ['super_admin', 'org_admin', 'teacher'];
+// Constants (ROLE_LABELS, CREATOR_ROLES, ADMIN_ROLES, MANAGER_ROLES, etc.) live in @/constants.

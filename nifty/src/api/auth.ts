@@ -7,4 +7,7 @@ export const authApi = {
 
   registerOrg: (data: RegisterOrgRequest) =>
     apiClient.post<TokenResponse>('/auth/register-org', data).then((r) => r.data),
+
+  impersonate: (userId: string) =>
+    apiClient.post<TokenResponse>(`/auth/impersonate/${userId}`).then((r) => r.data),
 };

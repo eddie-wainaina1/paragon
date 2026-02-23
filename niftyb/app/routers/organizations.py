@@ -13,6 +13,7 @@ from app.utils.deps import CurrentUser, require_roles
 from app.utils.security import hash_password
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
+from app.constants import Role, OrgType
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 logger = logging.getLogger(__name__)
@@ -26,11 +27,11 @@ def _org_out(org: Organization) -> OrgOut:
 @router.get("", response_model=List[OrgOut])
 async def list_orgs(current_user: CurrentUser):
     with tracer.start_as_current_span("orgs.list"):
-        if current_user.role == "super_admin":
+        if current_user.role == Role.super_admin:
             cached = await cache_get("orgs:list:all")
             if cached:
                 return cached
-            orgs = Organization.objects()
+            orgs = Organization.list_all()
             result = [_org_out(o).model_dump() for o in orgs]
             await cache_set("orgs:list:all", result, ttl=600)
             return result
@@ -40,23 +41,23 @@ async def list_orgs(current_user: CurrentUser):
 
 
 @router.post("", response_model=OrgOut, status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(require_roles("super_admin"))])
+             dependencies=[Depends(require_roles(Role.super_admin))])
 async def create_org(body: OrgCreate):
     slug = re.sub(r"[^a-z0-9]+", "-", body.name.lower()).strip("-")
     base_slug = slug
     counter = 1
-    while Organization.objects(slug=slug).first():
+    while Organization.slug_exists(slug):
         slug = f"{base_slug}-{counter}"
         counter += 1
 
-    org = Organization(name=body.name, slug=slug, type=body.type)
+    org = Organization(name=body.name, slug=slug, type=body.type, internal=body.internal)
     org.save()
     await cache_delete("orgs:list:all")
     logger.info("Org created", extra={"org_id": str(org.id)})
 
     admin_temp_password = None
     if body.admin_email:
-        if User.objects(email=body.admin_email).first():
+        if User.get_by_email(body.admin_email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Email {body.admin_email} is already registered",
@@ -68,7 +69,7 @@ async def create_org(body: OrgCreate):
             name=admin_name,
             email=body.admin_email,
             password_hash=hash_password(admin_temp_password),
-            role="org_admin",
+            role=Role.org_admin,
             org=org,
             avatar=avatar,
         )
@@ -81,9 +82,9 @@ async def create_org(body: OrgCreate):
 
 
 @router.put("/{org_id}", response_model=OrgOut,
-            dependencies=[Depends(require_roles("super_admin"))])
+            dependencies=[Depends(require_roles(Role.super_admin))])
 async def update_org(org_id: str, body: OrgUpdate):
-    org = Organization.objects(id=org_id).first()
+    org = Organization.get_by_id(org_id)
     if not org:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
 
@@ -91,24 +92,26 @@ async def update_org(org_id: str, body: OrgUpdate):
         org.name = body.name
     if body.type:
         org.type = body.type
+    if body.internal is not None:
+        org.internal = body.internal
     org.save()
     await cache_delete("orgs:list:all")
     return _org_out(org)
 
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT,
-               dependencies=[Depends(require_roles("super_admin"))])
+               dependencies=[Depends(require_roles(Role.super_admin))])
 async def delete_org(org_id: str, current_user: CurrentUser):
-    org = Organization.objects(id=org_id).first()
+    org = Organization.get_by_id(org_id)
     if not org:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
 
-    if org.type == "platform":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot delete the platform organization")
+    if org.internal:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot delete an internal organization")
 
     # Cascade-delete users and content belonging to this org
-    User.objects(org=org).delete()
-    Content.objects(org=org).delete()
+    User.delete_by_org(org)
+    Content.delete_by_org(org)
     org.delete()
     await cache_delete("orgs:list:all")
     logger.info("Org deleted", extra={"org_id": org_id})

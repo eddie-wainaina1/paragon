@@ -1,7 +1,8 @@
 import { Box, Typography, Button } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import type { Role } from '@/types';
+import { Role } from '@/constants';
+import type { Role as RoleType } from '@/types';
 
 interface NavItem {
   id: string;
@@ -15,7 +16,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function getNavSections(role: Role): NavSection[] {
+function getNavSections(role: RoleType): NavSection[] {
   const sections: NavSection[] = [
     {
       section: 'General',
@@ -26,7 +27,7 @@ function getNavSections(role: Role): NavSection[] {
     },
   ];
 
-  if (['super_admin', 'tutor', 'teacher', 'org_admin'].includes(role)) {
+  if ((Role.creator as readonly string[]).includes(role)) {
     sections.push({
       section: 'Content',
       items: [
@@ -36,7 +37,7 @@ function getNavSections(role: Role): NavSection[] {
     });
   }
 
-  if (['super_admin', 'org_admin', 'teacher'].includes(role)) {
+  if ((Role.manager as readonly string[]).includes(role)) {
     sections.push({
       section: 'Classes',
       items: [
@@ -45,7 +46,7 @@ function getNavSections(role: Role): NavSection[] {
     });
   }
 
-  if (['super_admin', 'org_admin'].includes(role)) {
+  if ((Role.admin as readonly string[]).includes(role)) {
     const mgmtItems: NavItem[] = [
       { id: 'users', icon: '👥', label: 'Users', path: '/app/users' },
     ];

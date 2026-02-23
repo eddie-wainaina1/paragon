@@ -17,19 +17,14 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
+import { ContentTypeOptions, Role } from '@/constants';
 import type { ContentType, ContentScope } from '@/types';
-
-const TYPE_OPTIONS: { value: ContentType; icon: string; label: string }[] = [
-  { value: 'text', icon: '📝', label: 'Text' },
-  { value: 'video', icon: '🎬', label: 'Video' },
-  { value: 'audio', icon: '🎧', label: 'Audio' },
-];
 
 export default function CreateContent() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const canGlobal = user?.role === 'super_admin' || user?.role === 'tutor';
+  const canGlobal = Role.global_scope.includes(user?.role as never);
 
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
@@ -114,7 +109,7 @@ export default function CreateContent() {
               Content Type
             </Typography>
             <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5 }}>
-              {TYPE_OPTIONS.map((opt) => (
+              {ContentTypeOptions.map((opt) => (
                 <Box
                   key={opt.value}
                   onClick={() => setType(opt.value)}

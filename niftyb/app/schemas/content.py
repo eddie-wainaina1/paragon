@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from app.constants import ContentType, ContentScope
 
 
 class ContentCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=300)
-    type: str = Field(..., pattern="^(text|video|audio)$")
-    scope: str = Field("org", pattern="^(global|org)$")
+    type: str = Field(..., pattern=ContentType.pattern())
+    scope: str = Field("org", pattern=ContentScope.pattern())
     subject: Optional[str] = Field(None, max_length=200)
     body: Optional[str] = None
     emoji: Optional[str] = Field(None, max_length=10)
@@ -14,8 +15,8 @@ class ContentCreate(BaseModel):
 
 class ContentUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=300)
-    type: Optional[str] = Field(None, pattern="^(text|video|audio)$")
-    scope: Optional[str] = Field(None, pattern="^(global|org)$")
+    type: Optional[str] = Field(None, pattern=ContentType.pattern())
+    scope: Optional[str] = Field(None, pattern=ContentScope.pattern())
     subject: Optional[str] = Field(None, max_length=200)
     body: Optional[str] = None
     locked: Optional[bool] = None

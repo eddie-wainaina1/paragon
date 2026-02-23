@@ -75,7 +75,7 @@ services:
       OTEL_SERVICE_NAME: nifty-backend
       OTEL_EXPORTER: ${OTEL_EXPORTER:-console}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318}
-      CORS_ORIGINS: http://localhost:3000,http://frontend:80
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://frontend:80}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -104,8 +104,9 @@ services:
     ports:
       - "3000:80"
     environment:
-      # Runtime variable used by the nginx template to proxy /api → backend
+      # Runtime variables used by the nginx template
       BACKEND_URL: http://backend:8000
+      MAX_BODY_SIZE: ${MAX_BODY_SIZE:-0}
     depends_on:
       backend:
         condition: service_healthy
