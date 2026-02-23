@@ -22,7 +22,7 @@ def connect_db() -> None:
 
     # Raw PyMongo client for GridFS
     _mongo_client = MongoClient(settings.mongodb_uri)
-    db_name = settings.mongodb_uri.rsplit("/", 1)[-1].split("?")[0]
+    db_name = settings.mongodb_uri.rsplit("/", 1)[-1].split("=")[0]
     _db = _mongo_client[db_name]
     _fs = gridfs.GridFS(_db)
 
