@@ -38,6 +38,7 @@ export default function Users() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<RoleType>('teacher');
   const [orgId, setOrgId] = useState('');
   const [error, setError] = useState('');
@@ -58,7 +59,7 @@ export default function Users() {
       usersApi.create({
         name,
         email,
-        password: 'password',
+        password,
         role,
         org_id: isSuperAdmin ? orgId : currentUser?.org ?? '',
       }),
@@ -66,6 +67,7 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setName('');
       setEmail('');
+      setPassword('');
       setError('');
     },
     onError: (err: unknown) => {
@@ -97,8 +99,12 @@ export default function Users() {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) {
-      setError('Name and email are required');
+    if (!name || !email || !password) {
+      setError('Name, email, and password are required');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
     if (isSuperAdmin && !orgId) {
@@ -149,6 +155,14 @@ export default function Users() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              slotProps={{ htmlInput: { minLength: 6 } }}
             />
             <FormControl>
               <InputLabel>Role</InputLabel>

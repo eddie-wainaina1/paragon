@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Nifty{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#FFF7ED;font-family:Arial,Helvetica,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#FFF7ED;padding:40px 16px;">
+    <tr>
+      <td align="center">
+
+        <table width="600" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:600px;width:100%;background-color:#ffffff;
+                      border-radius:8px;overflow:hidden;
+                      box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#F97316;padding:24px 32px;">
+              <span style="font-size:26px;font-weight:700;color:#ffffff;
+                           letter-spacing:-0.5px;">Nifty</span>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 32px 24px 32px;color:#1a1a1a;
+                       font-size:15px;line-height:1.7;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:16px 32px 28px 32px;
+                       border-top:1px solid #f0e8e0;
+                       color:#999999;font-size:12px;line-height:1.6;">
+              &copy; {{ year }} Nifty by Paragon. All rights reserved.<br />
+              You received this email because an account was created with your email address on <a href="https://paragoneschool.com">paragoneschool.com</a>.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

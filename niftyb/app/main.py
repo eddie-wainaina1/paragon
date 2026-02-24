@@ -13,6 +13,7 @@ from app.db import connect_db, disconnect_db
 from app.telemetry import setup_telemetry
 from app.routers import auth, users, organizations, content, classes
 from app.utils.security import hash_password
+from app.migrations import run_migrations
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -41,17 +42,22 @@ def _seed_platform() -> None:
         org.internal = True
         org.save()
 
-    if not User.objects(email=settings.superadmin_email).first():
-        admin = User(
+    existing_admin = User.objects(email=settings.superadmin_email).first()
+    if not existing_admin:
+        User(
             name="Super Admin",
             email=settings.superadmin_email,
             password_hash=hash_password(settings.superadmin_password),
             role="super_admin",
             org=org,
             avatar="SA",
-        )
-        admin.save()
+            verified=True,
+        ).save()
         logger.info("Seed super_admin created", extra={"email": settings.superadmin_email})
+    elif not existing_admin.verified:
+        existing_admin.verified = True
+        existing_admin.save()
+        logger.info("Seed super_admin verified (idempotent fix)")
 
 
 @asynccontextmanager
@@ -62,6 +68,7 @@ async def lifespan(app: FastAPI):
     RedisInstrumentor().instrument()
     connect_db()
     _seed_platform()
+    run_migrations()
     logger.info("Nifty backend started", extra={"env": settings.app_env})
     yield
     # ── Shutdown ─────────────────────────────────────────────────────────────

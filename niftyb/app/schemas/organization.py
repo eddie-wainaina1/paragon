@@ -24,8 +24,6 @@ class OrgOut(BaseModel):
     type: str
     internal: bool
     created_at: datetime
-    # Populated only when an admin user is auto-created during org registration
-    admin_temp_password: Optional[str] = None
 
     class Config:
         from_attributes = True

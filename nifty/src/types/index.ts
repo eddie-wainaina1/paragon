@@ -17,7 +17,6 @@ export interface Organization {
   type: OrgType;
   internal: boolean;
   created_at: string;
-  admin_temp_password?: string;
 }
 
 export interface User {
@@ -28,6 +27,7 @@ export interface User {
   org: string;
   org_name: string;
   avatar: string;
+  verified: boolean;
   created_at: string;
 }
 

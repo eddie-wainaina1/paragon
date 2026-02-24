@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional
-from mongoengine import Document, StringField, EmailField, ReferenceField, DateTimeField
+from mongoengine import Document, StringField, EmailField, ReferenceField, DateTimeField, BooleanField
 from app.models.organization import Organization
 from app.constants import Role
 
@@ -20,6 +20,7 @@ class User(Document):
     org = ReferenceField(Organization, required=True)
     avatar = StringField(max_length=4, default="?")  # initials
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
+    verified = BooleanField(default=False)
 
     # ── Queries ──────────────────────────────────────────────────────────────
 
@@ -63,4 +64,5 @@ class User(Document):
             "org_name": self.org.name if self.org else None,
             "avatar": self.avatar,
             "created_at": self.created_at.isoformat(),
+            "verified": bool(self.verified),
         }

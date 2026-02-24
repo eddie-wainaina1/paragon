@@ -27,7 +27,6 @@ export default function Organizations() {
   const [orgName, setOrgName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [error, setError] = useState('');
-  const [tempPassword, setTempPassword] = useState('');
 
   const { data: orgs = [], isLoading } = useQuery({
     queryKey: ['organizations'],
@@ -50,15 +49,12 @@ export default function Organizations() {
         name: orgName,
         ...(adminEmail ? { admin_email: adminEmail } : {}),
       }),
-    onSuccess: (created) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setOrgName('');
       setAdminEmail('');
       setError('');
-      if (created.admin_temp_password) {
-        setTempPassword(created.admin_temp_password);
-      }
     },
     onError: (err: unknown) => {
       const msg =
@@ -83,7 +79,6 @@ export default function Organizations() {
       return;
     }
     setError('');
-    setTempPassword('');
     createMutation.mutate();
   };
 
@@ -105,14 +100,6 @@ export default function Organizations() {
           {error && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {error}
-            </Alert>
-          )}
-
-          {tempPassword && (
-            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-              Organization registered! Org admin created —{' '}
-              <strong>temporary password: {tempPassword}</strong>. Share this with the admin and ask
-              them to change it on first login.
             </Alert>
           )}
 

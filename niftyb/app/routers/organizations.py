@@ -1,4 +1,5 @@
 """Organization CRUD — super_admin only (except GET for own org)."""
+import asyncio
 import re
 import secrets
 import logging
@@ -10,10 +11,12 @@ from app.models.user import User
 from app.models.content import Content
 from app.schemas.organization import OrgCreate, OrgUpdate, OrgOut
 from app.utils.deps import CurrentUser, require_roles
-from app.utils.security import hash_password
+from app.utils.security import hash_password, create_verification_token
+from app.email import send_invite_email
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
 from app.constants import Role, OrgType
+from app.config import settings
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 logger = logging.getLogger(__name__)
@@ -55,7 +58,6 @@ async def create_org(body: OrgCreate):
     await cache_delete("orgs:list:all")
     logger.info("Org created", extra={"org_id": str(org.id)})
 
-    admin_temp_password = None
     if body.admin_email:
         if User.get_by_email(body.admin_email):
             raise HTTPException(
@@ -72,13 +74,16 @@ async def create_org(body: OrgCreate):
             role=Role.org_admin,
             org=org,
             avatar=avatar,
+            # verified remains False — admin must click the invite link
         )
         admin_user.save()
+
+        verification_token = create_verification_token(str(admin_user.id))
+        verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+        asyncio.create_task(send_invite_email(admin_user, admin_temp_password, verification_url))
         logger.info("Org admin created", extra={"org_id": str(org.id), "email": body.admin_email})
 
-    out = _org_out(org)
-    out.admin_temp_password = admin_temp_password
-    return out
+    return _org_out(org)
 
 
 @router.put("/{org_id}", response_model=OrgOut,

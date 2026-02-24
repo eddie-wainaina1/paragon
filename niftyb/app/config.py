@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     superadmin_email: str = "admin@nifty.internal"
     superadmin_password: str = "change-me-in-production"
 
+    # SendGrid email
+    sendgrid_api_key: str = "Some-Api-Key"
+    sendgrid_from_email: str = "info@paragoneschool.com"
+    sendgrid_from_name: str = "Paragon Shell"
+
+    # Frontend base URL — used to build verification redirect links
+    frontend_url: str = "http://localhost:5173"
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

@@ -1,5 +1,6 @@
 """User CRUD endpoints."""
 
+import asyncio
 import logging
 from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -7,8 +8,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from app.models.user import User
 from app.models.organization import Organization
 from app.schemas.user import UserCreate, UserUpdate, UserOut
-from app.utils.security import hash_password
+from app.utils.security import hash_password, create_verification_token
 from app.utils.deps import CurrentUser, require_roles
+from app.email import send_welcome_email
+from app.config import settings
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
 from app.constants import Role
@@ -67,7 +70,7 @@ async def update_me(body: UserUpdate, current_user: CurrentUser):
 
 
 @router.get("", response_model=List[UserOut])
-async def list_users(current_user: CurrentUser):
+async def list_users(current_user: User = Depends(require_roles(*Role.admin))):
     with tracer.start_as_current_span("users.list"):
         cache_key = f"users:list:{current_user.org.id}"
         if current_user.role == Role.super_admin:
@@ -127,6 +130,11 @@ async def create_user(
             avatar=av,
         )
         user.save()
+
+        verification_token = create_verification_token(str(user.id))
+        verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+        asyncio.create_task(send_welcome_email(user, verification_url))
+
         await cache_delete(f"users:list:{org.id}")
         await cache_delete("users:list:all")
         logger.info("User created", extra={"user_id": str(user.id)})
@@ -146,6 +154,11 @@ async def update_user(
     if current_user.role == Role.org_admin and str(user.org.id) != str(current_user.org.id):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Cannot modify user from another org"
+        )
+
+    if current_user.role == Role.org_admin and body.role in Role.internal:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Insufficient permissions for that role"
         )
 
     if body.name:

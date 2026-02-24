@@ -27,6 +27,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const [tab, setTab] = useState<'login' | 'register'>(initialTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   // Login form state
@@ -45,6 +46,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     if (open) {
       setTab(initialTab);
       setError('');
+      setRegisterSuccess(false);
       setEmail('');
       setPassword('');
       setOrgName('');
@@ -58,6 +60,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const handleTabChange = (_: React.SyntheticEvent, v: 'login' | 'register') => {
     setTab(v);
     setError('');
+    setRegisterSuccess(false);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -94,8 +97,12 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         email: regEmail,
         password: regPassword,
       });
-      setAuth(res.user, res.access_token);
-      onClose();
+      if (res.user.verified === false) {
+        setRegisterSuccess(true);
+      } else {
+        setAuth(res.user, res.access_token);
+        onClose();
+      }
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -202,6 +209,12 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Create your school's account on Nifty by Paragon
             </Typography>
+
+            {registerSuccess && (
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                Account created — please check your email to verify your account before logging in.
+              </Alert>
+            )}
 
             <TextField
               label="Organization Name"

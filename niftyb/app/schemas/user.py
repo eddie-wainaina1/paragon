@@ -28,6 +28,7 @@ class UserOut(BaseModel):
     org_name: str
     avatar: str
     created_at: datetime
+    verified: bool = False
 
     class Config:
         from_attributes = True

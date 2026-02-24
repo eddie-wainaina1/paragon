@@ -1,15 +1,22 @@
 """Authentication endpoints: login, organization self-registration, and impersonation."""
+import asyncio
 import re
 import logging
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, Query, status, Depends
+from fastapi.responses import RedirectResponse
 
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.user import LoginRequest, RegisterOrgRequest, TokenResponse, UserOut
-from app.utils.security import hash_password, verify_password, create_access_token
+from app.utils.security import (
+    hash_password, verify_password, create_access_token, create_verification_token,
+    decode_token,
+)
 from app.utils.deps import require_roles
+from app.email import send_welcome_email
 from app.telemetry import get_tracer
 from app.constants import Role, OrgType
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -31,6 +38,12 @@ async def login(body: LoginRequest):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password",
+            )
+
+        if not user.verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Please verify your email address before logging in",
             )
 
         token = create_access_token(
@@ -55,7 +68,6 @@ async def register_org(body: RegisterOrgRequest):
             )
 
         slug = re.sub(r"[^a-z0-9]+", "-", body.org_name.lower()).strip("-")
-        # Ensure slug uniqueness
         base_slug = slug
         counter = 1
         while Organization.slug_exists(slug):
@@ -75,14 +87,67 @@ async def register_org(body: RegisterOrgRequest):
             role=Role.org_admin,
             org=org,
             avatar=avatar,
+            # verified remains False — user must click the verification link
         )
         user.save()
+
+        verification_token = create_verification_token(str(user.id))
+        verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+        asyncio.create_task(send_welcome_email(user, verification_url))
 
         token = create_access_token(
             {"sub": str(user.id), "role": user.role, "org": str(org.id)}
         )
         logger.info("New org registered", extra={"org_id": str(org.id), "user_id": str(user.id)})
         return TokenResponse(access_token=token, user=_user_out(user))
+
+
+@router.get("/verify-email")
+async def verify_email(token: str = Query(...)):
+    """
+    Consume a one-time JWT verification token.
+    On success: marks the user verified and redirects to the frontend.
+    On failure: raises HTTP 400 (avoids token enumeration via 404).
+    """
+    with tracer.start_as_current_span("auth.verify_email"):
+        from jose import JWTError
+
+        try:
+            payload = decode_token(token)
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification link",
+            )
+
+        if payload.get("purpose") != "email_verify":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification link",
+            )
+
+        user = User.get_by_id(payload.get("sub", ""))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification link",
+            )
+
+        if user.verified:
+            # Already verified — redirect to login rather than error
+            return RedirectResponse(
+                url=f"{settings.frontend_url}/?verified=already",
+                status_code=status.HTTP_302_FOUND,
+            )
+
+        user.verified = True
+        user.save()
+        logger.info("Email verified", extra={"user_id": str(user.id)})
+
+        return RedirectResponse(
+            url=f"{settings.frontend_url}/?verified=true",
+            status_code=status.HTTP_302_FOUND,
+        )
 
 
 @router.post("/impersonate/{user_id}", response_model=TokenResponse)
@@ -109,7 +174,7 @@ async def impersonate_user(
             "sub": str(target.id),
             "role": target.role,
             "org": str(target.org.id),
-            "imp": str(current_user.id),   # audit — who started the session
+            "imp": str(current_user.id),
         })
         logger.info(
             "Impersonation started",

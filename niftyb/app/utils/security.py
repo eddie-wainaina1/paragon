@@ -45,3 +45,13 @@ def create_access_token(data: dict[str, Any]) -> str:
 
 def decode_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+
+
+def create_verification_token(user_id: str) -> str:
+    """Create a short-lived JWT for email verification (72-hour expiry)."""
+    payload = {
+        "sub": user_id,
+        "purpose": "email_verify",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=72),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
