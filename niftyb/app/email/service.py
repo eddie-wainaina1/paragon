@@ -22,12 +22,17 @@ def _save_to_tmp(to_email: str, subject: str, html_content: str) -> None:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     safe_to = to_email.replace("@", "_at_").replace(".", "_")
     path = _TMP_DIR / f"{timestamp}_{safe_to}.html"
+
     path.write_text(html_content, encoding="utf-8")
     logger.info("Email saved to %s (subject: %s)", path, subject)
 
 
 def _send_sync(to_email: str, to_name: str, subject: str, html_content: str) -> None:
-    """Blocking send — writes to tmp/ in non-production, sends via SendGrid otherwise."""
+    """
+    Blocking send.
+    - Non-production: writes to tmp/
+    - Production: sends via SendGrid
+    """
     from app.config import settings
 
     if settings.app_env != "production":
@@ -38,6 +43,7 @@ def _send_sync(to_email: str, to_name: str, subject: str, html_content: str) -> 
 
     client = get_sendgrid_client()
     if client is None:
+        logger.warning("SendGrid client not configured.")
         return
 
     message = Mail(
@@ -46,39 +52,70 @@ def _send_sync(to_email: str, to_name: str, subject: str, html_content: str) -> 
         subject=Subject(subject),
         html_content=HtmlContent(html_content),
     )
+
     try:
         response = client.send(message)
         logger.info(
             "Email sent",
-            extra={"to": to_email, "subject": subject, "status": response.status_code},
+            extra={
+                "to": to_email,
+                "subject": subject,
+                "status": response.status_code,
+            },
         )
-    except Exception as exc:
-        logger.error(
+    except Exception:
+        logger.exception(
             "Email send failed",
-            extra={"to": to_email, "subject": subject, "error": str(exc)},
+            extra={"to": to_email, "subject": subject},
         )
 
 
 def _dispatch(to_email: str, to_name: str, subject: str, html: str) -> None:
-    """Schedule a fire-and-forget send on the running event loop."""
-    loop = asyncio.get_event_loop()
-    asyncio.create_task(
-        loop.run_in_executor(None, _send_sync, to_email, to_name, subject, html)
+    """
+    Fire-and-forget background send.
+    Uses threadpool so we don't block the event loop.
+    """
+    loop = asyncio.get_running_loop()
+
+    # Schedule sync email send in thread pool
+    loop.run_in_executor(
+        None,
+        _send_sync,
+        to_email,
+        to_name,
+        subject,
+        html,
     )
 
 
 async def send_welcome_email(user, verification_url: str) -> None:
     """Send the welcome + verify email to an admin-created user."""
-    html = _render("welcome.html", user_name=user.name, verification_url=verification_url)
-    _dispatch(user.email, user.name, "Verify your Nifty account", html)
+    html = _render(
+        "welcome.html",
+        user_name=user.name,
+        verification_url=verification_url,
+    )
+
+    _dispatch(
+        user.email,
+        user.name,
+        "Verify your Nifty account",
+        html,
+    )
 
 
 async def send_invite_email(user, temp_password: str, verification_url: str) -> None:
-    """Send the org-admin invite email containing temp credentials + verify link."""
+    """Send the org-admin invite email with temp credentials + verify link."""
     html = _render(
         "invite.html",
         user_name=user.name,
         temp_password=temp_password,
         verification_url=verification_url,
     )
-    _dispatch(user.email, user.name, "You've been invited to Nifty", html)
+
+    _dispatch(
+        user.email,
+        user.name,
+        "You've been invited to Nifty",
+        html,
+    )
