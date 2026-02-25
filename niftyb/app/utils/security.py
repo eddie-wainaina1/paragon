@@ -55,3 +55,13 @@ def create_verification_token(user_id: str) -> str:
         "exp": datetime.now(timezone.utc) + timedelta(hours=72),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def create_password_reset_token(user_id: str) -> str:
+    """Create a short-lived JWT for password reset (1-hour expiry)."""
+    payload = {
+        "sub": user_id,
+        "purpose": "password_reset",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)

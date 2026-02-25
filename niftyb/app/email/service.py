@@ -119,3 +119,9 @@ async def send_invite_email(user, temp_password: str, verification_url: str) -> 
         "You've been invited to Nifty",
         html,
     )
+
+
+async def send_reset_password_email(user, reset_url: str) -> None:
+    """Send a password reset email with a 1-hour reset link."""
+    html = _render("reset_password.html", user_name=user.name, reset_url=reset_url)
+    _dispatch(user.email, user.name, "Reset your Nifty password", html)

@@ -7,13 +7,17 @@ from fastapi.responses import RedirectResponse
 
 from app.models.organization import Organization
 from app.models.user import User
-from app.schemas.user import LoginRequest, RegisterOrgRequest, TokenResponse, UserOut
+from app.schemas.user import (
+    LoginRequest, RegisterOrgRequest, TokenResponse, UserOut,
+    ForgotPasswordRequest, ResetPasswordRequest,
+)
 from app.utils.security import (
-    hash_password, verify_password, create_access_token, create_verification_token,
+    hash_password, verify_password, create_access_token,
+    create_verification_token, create_password_reset_token,
     decode_token,
 )
 from app.utils.deps import require_roles
-from app.email import send_welcome_email
+from app.email import send_welcome_email, send_reset_password_email
 from app.telemetry import get_tracer
 from app.constants import Role, OrgType
 from app.config import settings
@@ -148,6 +152,52 @@ async def verify_email(token: str = Query(...)):
             url=f"{settings.frontend_url}/?verified=true",
             status_code=status.HTTP_302_FOUND,
         )
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(body: ForgotPasswordRequest):
+    """
+    Request a password-reset email.
+    Always returns 200 regardless of whether the email exists — prevents user enumeration.
+    """
+    user = User.get_by_email(body.email)
+    if user:
+        reset_token = create_password_reset_token(str(user.id))
+        reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
+        asyncio.create_task(send_reset_password_email(user, reset_url))
+    return {"message": "If an account with that email exists, a reset link has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(body: ResetPasswordRequest):
+    """Consume a password-reset JWT and update the user's password."""
+    from jose import JWTError
+
+    try:
+        payload = decode_token(body.token)
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    if payload.get("purpose") != "password_reset":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    user = User.get_by_id(payload.get("sub", ""))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    user.password_hash = hash_password(body.new_password)
+    user.save()
+    logger.info("Password reset", extra={"user_id": str(user.id)})
+    return {"message": "Password updated successfully"}
 
 
 @router.post("/impersonate/{user_id}", response_model=TokenResponse)

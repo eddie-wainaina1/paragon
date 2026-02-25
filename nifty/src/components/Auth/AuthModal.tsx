@@ -17,6 +17,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 
+type ModalView = 'login' | 'register' | 'forgot';
+
 interface Props {
   open: boolean;
   initialTab?: 'login' | 'register';
@@ -25,9 +27,11 @@ interface Props {
 
 export default function AuthModal({ open, initialTab = 'login', onClose }: Props) {
   const [tab, setTab] = useState<'login' | 'register'>(initialTab);
+  const [view, setView] = useState<ModalView>(initialTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   // Login form state
@@ -41,12 +45,17 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
+  // Forgot password form state
+  const [forgotEmail, setForgotEmail] = useState('');
+
   // Sync tab + reset form whenever the modal opens or initialTab changes
   useEffect(() => {
     if (open) {
       setTab(initialTab);
+      setView(initialTab);
       setError('');
       setRegisterSuccess(false);
+      setForgotSuccess(false);
       setEmail('');
       setPassword('');
       setOrgName('');
@@ -54,16 +63,26 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
       setLastName('');
       setRegEmail('');
       setRegPassword('');
+      setForgotEmail('');
     }
   }, [open, initialTab]);
 
   const handleTabChange = (_: React.SyntheticEvent, v: 'login' | 'register') => {
     setTab(v);
+    setView(v);
     setError('');
     setRegisterSuccess(false);
+    setForgotSuccess(false);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const switchView = (v: ModalView) => {
+    setView(v);
+    if (v === 'login' || v === 'register') setTab(v);
+    setError('');
+    setForgotSuccess(false);
+  };
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -81,7 +100,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     if (!orgName || !firstName || !regEmail || !regPassword) {
@@ -113,6 +132,21 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.forgotPassword({ email: forgotEmail });
+      setForgotSuccess(true);
+    } catch {
+      // Always show success to avoid user enumeration
+      setForgotSuccess(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -130,13 +164,16 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     >
       <DialogContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Tabs
-            value={tab}
-            onChange={handleTabChange}
-          >
-            <Tab label="Sign In" value="login" sx={{ fontWeight: 700 }} />
-            <Tab label="Register Organization" value="register" sx={{ fontWeight: 700 }} />
-          </Tabs>
+          {view !== 'forgot' ? (
+            <Tabs value={tab} onChange={handleTabChange}>
+              <Tab label="Sign In" value="login" sx={{ fontWeight: 700 }} />
+              <Tab label="Register Organization" value="register" sx={{ fontWeight: 700 }} />
+            </Tabs>
+          ) : (
+            <Typography fontWeight={700} fontSize="0.95rem" color="text.secondary" sx={{ pl: 1 }}>
+              Forgot Password
+            </Typography>
+          )}
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
@@ -151,7 +188,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         )}
 
         {/* ── LOGIN ── */}
-        {tab === 'login' && (
+        {view === 'login' && (
           <Box component="form" onSubmit={handleLogin}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
               Welcome back! 👋
@@ -174,9 +211,18 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               fullWidth
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              sx={{ mb: 3 }}
+              sx={{ mb: 1 }}
               required
             />
+            <Box sx={{ textAlign: 'right', mb: 2 }}>
+              <Box
+                component="span"
+                sx={{ fontSize: '0.8rem', color: 'primary.main', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => switchView('forgot')}
+              >
+                Forgot password?
+              </Box>
+            </Box>
             <Button
               type="submit"
               variant="contained"
@@ -192,7 +238,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               <Box
                 component="span"
                 sx={{ color: 'primary.main', fontWeight: 700, cursor: 'pointer' }}
-                onClick={() => setTab('register')}
+                onClick={() => switchView('register')}
               >
                 Register Organization
               </Box>
@@ -201,7 +247,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         )}
 
         {/* ── REGISTER ── */}
-        {tab === 'register' && (
+        {view === 'register' && (
           <Box component="form" onSubmit={handleRegister}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
               Register Organization 🏫
@@ -273,9 +319,59 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               <Box
                 component="span"
                 sx={{ color: 'primary.main', fontWeight: 700, cursor: 'pointer' }}
-                onClick={() => setTab('login')}
+                onClick={() => switchView('login')}
               >
                 Sign In
+              </Box>
+            </Typography>
+          </Box>
+        )}
+
+        {/* ── FORGOT PASSWORD ── */}
+        {view === 'forgot' && (
+          <Box component="form" onSubmit={handleForgotPassword}>
+            <Typography variant="h5" sx={{ mb: 0.5 }}>
+              Reset your password
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Enter your email and we'll send you a reset link.
+            </Typography>
+
+            {forgotSuccess ? (
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                If an account with that email exists, a reset link has been sent. Check your inbox.
+              </Alert>
+            ) : (
+              <>
+                <TextField
+                  label="Email"
+                  type="email"
+                  fullWidth
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  sx={{ mb: 3 }}
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                >
+                  Send Reset Link →
+                </Button>
+              </>
+            )}
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+              <Box
+                component="span"
+                sx={{ color: 'primary.main', fontWeight: 700, cursor: 'pointer' }}
+                onClick={() => switchView('login')}
+              >
+                Back to Sign In
               </Box>
             </Typography>
           </Box>

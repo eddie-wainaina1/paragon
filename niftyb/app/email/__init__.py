@@ -1,3 +1,3 @@
-from app.email.service import send_welcome_email, send_invite_email
+from app.email.service import send_welcome_email, send_invite_email, send_reset_password_email
 
-__all__ = ["send_welcome_email", "send_invite_email"]
+__all__ = ["send_welcome_email", "send_invite_email", "send_reset_password_email"]
