@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
-import { ContentTypeOptions, Role } from '@/constants';
+import { ContentTypeOptions, ContentFileAccept, Role } from '@/constants';
 import type { ContentType, ContentScope } from '@/types';
 
 export default function CreateContent() {
@@ -52,11 +52,17 @@ export default function CreateContent() {
     },
   });
 
+  const needsFile = type === 'video' || type === 'audio' || type === 'pdf';
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!title || !subject) {
       setError('Title and subject are required');
+      return;
+    }
+    if (needsFile && !file) {
+      setError(`A ${type} file is required for this content type`);
       return;
     }
     createMutation.mutate();
@@ -112,7 +118,7 @@ export default function CreateContent() {
               {ContentTypeOptions.map((opt) => (
                 <Box
                   key={opt.value}
-                  onClick={() => setType(opt.value)}
+                  onClick={() => { setType(opt.value); setFile(null); }}
                   sx={{
                     flex: 1,
                     p: 2,
@@ -147,40 +153,41 @@ export default function CreateContent() {
               </FormControl>
             )}
 
-            <TextField
-              label="Content Body"
-              fullWidth
-              multiline
-              rows={4}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={
-                type === 'text'
-                  ? 'Write your lesson content here...'
-                  : 'Paste a URL for video/audio...'
-              }
-              sx={{ mb: 2.5 }}
-            />
+            {type === 'text' && (
+              <TextField
+                label="Content Body"
+                fullWidth
+                multiline
+                rows={4}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your lesson content here..."
+                sx={{ mb: 2.5 }}
+              />
+            )}
 
-            {/* File upload */}
-            <Box sx={{ mb: 3 }}>
-              <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', mb: 1 }}>
-                Upload File (optional)
-              </Typography>
-              <Button
-                variant="outlined"
-                component="label"
-                size="small"
-                sx={{ borderRadius: 2 }}
-              >
-                {file ? `📎 ${file.name}` : 'Choose File'}
-                <input
-                  type="file"
-                  hidden
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-              </Button>
-            </Box>
+            {/* File upload — shown for video / audio / pdf; hidden for text */}
+            {needsFile && (
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', mb: 1 }}>
+                  Upload {type.toUpperCase()} File <span style={{ color: '#EF4444' }}>*</span>
+                </Typography>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                >
+                  {file ? `📎 ${file.name}` : `Choose ${type.toUpperCase()} file`}
+                  <input
+                    type="file"
+                    hidden
+                    accept={ContentFileAccept[type]}
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  />
+                </Button>
+              </Box>
+            )}
 
             <Button
               type="submit"

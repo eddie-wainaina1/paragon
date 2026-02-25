@@ -10,8 +10,11 @@ import {
 } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 import { Role } from '@/constants';
 
 const ROLE_AVATAR_COLORS: Record<string, string> = {
@@ -25,6 +28,7 @@ const ROLE_AVATAR_COLORS: Record<string, string> = {
 
 export default function Topbar() {
   const { user, clearAuth, isImpersonating, stopImpersonating, originalUser } = useAuthStore();
+  const { mode, toggleMode } = useThemeStore();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -44,7 +48,7 @@ export default function Topbar() {
       position="sticky"
       elevation={0}
       sx={{
-        background: '#fff',
+        bgcolor: 'background.paper',
         borderBottom: '2px solid',
         borderColor: 'divider',
         color: 'text.primary',
@@ -113,6 +117,13 @@ export default function Topbar() {
         <Tooltip title="Notifications">
           <IconButton color="default">
             <NotificationsIcon />
+          </IconButton>
+        </Tooltip>
+
+        {/* Dark / light mode toggle */}
+        <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <IconButton onClick={toggleMode} color="default" size="small">
+            {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
           </IconButton>
         </Tooltip>
 

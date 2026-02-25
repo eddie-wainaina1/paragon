@@ -12,19 +12,22 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useQuery } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
+import PdfViewer from './PdfViewer';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  text: { bg: '#DBEAFE', color: '#1D4ED8' },
+  text:  { bg: '#DBEAFE', color: '#1D4ED8' },
   video: { bg: '#FCE7F3', color: '#BE185D' },
   audio: { bg: '#D1FAE5', color: '#065F46' },
+  pdf:   { bg: '#FEF3C7', color: '#92400E' },
 };
 
 const THUMB_GRADIENTS: Record<string, string> = {
-  text: 'linear-gradient(135deg,#DBEAFE,#EFF6FF)',
+  text:  'linear-gradient(135deg,#DBEAFE,#EFF6FF)',
   video: 'linear-gradient(135deg,#FCE7F3,#FDF2F8)',
   audio: 'linear-gradient(135deg,#D1FAE5,#ECFDF5)',
+  pdf:   'linear-gradient(135deg,#FEF3C7,#FFFBEB)',
 };
 
 interface Props {
@@ -52,13 +55,14 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
 
   const isVideo = content?.type === 'video';
   const isAudio = content?.type === 'audio';
+  const isPdf = content?.type === 'pdf';
   const typeColor = content ? (TYPE_COLORS[content.type] ?? TYPE_COLORS.text) : TYPE_COLORS.text;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth={isVideo ? 'md' : 'sm'}
+      maxWidth={isVideo || isPdf ? 'md' : 'sm'}
       fullWidth
       PaperProps={{ sx: { borderRadius: 4, border: '2px solid', borderColor: 'divider' } }}
     >
@@ -229,6 +233,19 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
               </Box>
 
               <Divider sx={{ mb: 2 }} />
+
+              {/* ── PDF viewer ── */}
+              {isPdf && (
+                <Box sx={{ mb: 2 }}>
+                  {streamUrl ? (
+                    <PdfViewer url={streamUrl} />
+                  ) : (
+                    <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      No PDF attached.
+                    </Typography>
+                  )}
+                </Box>
+              )}
 
               {/* ── Audio player ── */}
               {isAudio && (

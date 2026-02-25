@@ -74,11 +74,12 @@ class ContentType(Constant):
     text = "text"
     video = "video"
     audio = "audio"
+    pdf = "pdf"
 
     @classmethod
     def values(cls) -> list[str]:
         """Return all content type values."""
-        return [cls.text, cls.video, cls.audio]
+        return [cls.text, cls.video, cls.audio, cls.pdf]
 
 
 class ContentScope(Constant):
@@ -105,6 +106,7 @@ class ContentEmoji(Constant):
     text = "📄"
     video = "🎬"
     audio = "🎧"
+    pdf = "📑"
 
     @classmethod
     def to_dict(cls) -> dict[str, str]:
@@ -113,6 +115,7 @@ class ContentEmoji(Constant):
             ContentType.text: cls.text,
             ContentType.video: cls.video,
             ContentType.audio: cls.audio,
+            ContentType.pdf: cls.pdf,
         }
 
 

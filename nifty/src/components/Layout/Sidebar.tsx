@@ -1,4 +1,4 @@
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, useTheme } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Role } from '@/constants';
@@ -73,10 +73,15 @@ export default function Sidebar() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   if (!user) return null;
 
   const sections = getNavSections(user.role);
+
+  const activeItemBg = isDark ? 'rgba(249,115,22,0.18)' : 'linear-gradient(135deg,#FFEDD5,#FEF3C7)';
+  const hoverBg = isDark ? 'rgba(249,115,22,0.08)' : '#FFF7ED';
 
   return (
     <Box
@@ -84,7 +89,7 @@ export default function Sidebar() {
       sx={{
         width: 230,
         flexShrink: 0,
-        background: '#fff',
+        bgcolor: 'background.paper',
         borderRight: '2px solid',
         borderColor: 'divider',
         display: { xs: 'none', md: 'flex' },
@@ -126,11 +131,9 @@ export default function Sidebar() {
                   fontWeight: 600,
                   fontSize: '0.9rem',
                   color: active ? 'primary.main' : 'text.secondary',
-                  background: active
-                    ? 'linear-gradient(135deg,#FFEDD5,#FEF3C7)'
-                    : 'transparent',
+                  background: active ? activeItemBg : 'transparent',
                   '&:hover': {
-                    background: active ? 'linear-gradient(135deg,#FFEDD5,#FEF3C7)' : '#FFF7ED',
+                    background: active ? activeItemBg : hoverBg,
                     color: active ? 'primary.main' : 'text.primary',
                   },
                 }}

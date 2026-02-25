@@ -6,7 +6,7 @@ export type Role =
   | 'teacher'
   | 'student';
 
-export type ContentType = 'text' | 'video' | 'audio';
+export type ContentType = 'text' | 'video' | 'audio' | 'pdf';
 export type ContentScope = 'global' | 'org';
 export type OrgType = 'platform' | 'school';
 

@@ -83,9 +83,10 @@ export const ContentEmojiConst = {
     text: "📄",
     video: "🎬",
     audio: "🎧",
+    pdf: "📑",
 
     values() {
-        return ["📄", "🎬", "🎧"];
+        return ["📄", "🎬", "🎧", "📑"];
     },
 
     to_dict() {
@@ -93,6 +94,7 @@ export const ContentEmojiConst = {
             text: "📄",
             video: "🎬",
             audio: "🎧",
+            pdf: "📑",
         };
     },
 };
@@ -104,9 +106,10 @@ export const ContentTypeConst = {
     text: "text" as const,
     video: "video" as const,
     audio: "audio" as const,
+    pdf: "pdf" as const,
 
     values() {
-        return ["text", "video", "audio"];
+        return ["text", "video", "audio", "pdf"];
     },
 
     to_dict() {
@@ -114,6 +117,7 @@ export const ContentTypeConst = {
             text: "Text",
             video: "Video",
             audio: "Audio",
+            pdf: "PDF",
         };
     },
 };
@@ -126,6 +130,7 @@ export const ContentTypeOptions = [
     { value: "text" as const, icon: "📝", label: "Text" },
     { value: "video" as const, icon: "🎬", label: "Video" },
     { value: "audio" as const, icon: "🎧", label: "Audio" },
+    { value: "pdf" as const, icon: "📑", label: "PDF" },
 ];
 
 /** Chip colours for content type badges. */
@@ -134,7 +139,15 @@ export const ContentTypeStyle = {
         text: { bg: "#DBEAFE", color: "#1D4ED8" },
         video: { bg: "#FCE7F3", color: "#BE185D" },
         audio: { bg: "#D1FAE5", color: "#065F46" },
+        pdf:   { bg: "#FEF3C7", color: "#92400E" },
     },
+};
+
+/** File accept attributes for the upload input, keyed by content type. */
+export const ContentFileAccept: Record<string, string> = {
+    video: "video/*",
+    audio: "audio/*",
+    pdf: "application/pdf",
 };
 
 /** Filter buttons shown in the Content Library. */
@@ -157,6 +170,12 @@ export const ContentFilters = [
         label: "🎧 Audio",
         bg: ContentTypeStyle.chip.audio.bg,
         color: ContentTypeStyle.chip.audio.color,
+    },
+    {
+        value: "pdf",
+        label: "📑 PDF",
+        bg: ContentTypeStyle.chip.pdf.bg,
+        color: ContentTypeStyle.chip.pdf.color,
     },
     { value: "global", label: "🌍 Global", bg: "#FEF3C7", color: "#92400E" },
 ] as const;

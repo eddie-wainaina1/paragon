@@ -20,6 +20,20 @@ router = APIRouter(prefix="/content", tags=["content"])
 logger = logging.getLogger(__name__)
 tracer = get_tracer(__name__)
 
+# Maps content type → allowed MIME prefixes (ending "/") or exact strings
+_ALLOWED_MIMES: dict[str, list[str]] = {
+    "video": ["video/"],
+    "audio": ["audio/"],
+    "pdf":   ["application/pdf"],
+}
+
+
+def _mime_allowed(content_type: str, mime: str) -> bool:
+    rules = _ALLOWED_MIMES.get(content_type)
+    if rules is None:
+        return True  # "text" has no strict file requirement
+    return any(mime.startswith(r) if r.endswith("/") else mime == r for r in rules)
+
 
 def _can_access(content: Content, user: User) -> bool:
     if user.role == Role.super_admin:
@@ -175,6 +189,13 @@ async def upload_file(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
         if str(content.author.id) != str(current_user.id) and current_user.role != Role.super_admin:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+
+        mime = file.content_type or ""
+        if not _mime_allowed(content.type, mime):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"File type '{mime}' is not allowed for {content.type} content",
+            )
 
         if content.file_id:
             gridfs_delete(content.file_id)
