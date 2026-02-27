@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Nifty by Paragon"
     app_env: str = "development"
-    debug: bool = True
+    debug: bool = False
     secret_key: str = "dev-secret-key-change-in-production-32"
 
     mongodb_uri: str = "mongodb://localhost:27017/nifty"
@@ -19,9 +19,9 @@ class Settings(BaseSettings):
 
     otel_service_name: str = "nifty-backend"
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"
-    otel_exporter: str = "console"  # "console" | "otlp"
+    otel_exporter: str = "none"  # "none" | "console" | "otlp"
 
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:3000"
 
     # Seed super-admin credentials (created once on first startup if absent)
     superadmin_email: str = "admin@nifty.internal"
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     sendgrid_from_name: str = "Paragon Shell"
 
     # Frontend base URL — used to build verification redirect links
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:3000"
 
     @property
     def cors_origins_list(self) -> List[str]:

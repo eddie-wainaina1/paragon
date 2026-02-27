@@ -31,6 +31,7 @@ WORKDIR /build
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY niftyb/requirements.txt .
@@ -44,6 +45,7 @@ FROM python:3.12-slim AS runner
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python packages ───────────────────────────────────────────────────────────

@@ -9,9 +9,11 @@ import {
   CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import Hls from 'hls.js';
 import { useQuery } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
-import { useAuthStore } from '@/store/authStore';
+import HlsVideoPlayer from './HlsVideoPlayer';
+import HlsAudioPlayer from './HlsAudioPlayer';
 import PdfViewer from './PdfViewer';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
@@ -37,7 +39,6 @@ interface Props {
 
 export default function ContentViewDialog({ contentId, onClose }: Props) {
   const open = !!contentId;
-  const token = useAuthStore((s) => s.token);
 
   // GET /content/{id} increments the view counter on the backend
   const { data: content, isLoading } = useQuery({
@@ -46,11 +47,18 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
     enabled: open,
   });
 
-  // Build a URL the browser can use as <video>/<audio> src.
-  // Auth token goes in the query string because native media elements
-  // cannot send custom Authorization headers.
-  const streamUrl = content?.file_id
-    ? `${BASE_URL}/content/${content.id}/file?token=${encodeURIComponent(token ?? '')}`
+  // File token only needed for PDF (audio and video both use HLS)
+  const needsFileToken = open && !!content?.file_id && content.type === 'pdf';
+  const { data: fileToken, isLoading: isTokenLoading } = useQuery({
+    queryKey: ['content-file-token', contentId],
+    queryFn: () => contentApi.getFileToken(contentId!),
+    enabled: needsFileToken,
+    staleTime: 25 * 60 * 1000,
+  });
+
+  // Stream URL used only by audio and PDF
+  const streamUrl = content?.file_id && fileToken
+    ? `${BASE_URL}/content/${content.id}/file?token=${encodeURIComponent(fileToken)}`
     : null;
 
   const isVideo = content?.type === 'video';
@@ -84,16 +92,15 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
           >
             {isLoading ? (
               <CircularProgress sx={{ color: 'rgba(255,255,255,0.6)' }} />
-            ) : streamUrl ? (
-              <video
-                key={streamUrl}
-                src={streamUrl}
-                controls
-                controlsList="nodownload"
-                disablePictureInPicture
-                onContextMenu={(e) => e.preventDefault()}
-                style={{ width: '100%', maxHeight: 440, display: 'block' }}
-              />
+            ) : content?.hls_ready && Hls.isSupported() ? (
+              <HlsVideoPlayer contentId={content.id} />
+            ) : content?.file_id && !content.hls_ready ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress size={32} sx={{ color: 'rgba(255,255,255,0.6)', mb: 1.5, display: 'block', mx: 'auto' }} />
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                  Video is being processed. Check back shortly.
+                </Typography>
+              </Box>
             ) : (
               <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem' }}>
                 No video attached
@@ -117,7 +124,7 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
           </Box>
         )}
 
-        {/* ── Text / Audio: emoji thumbnail header ── */}
+        {/* ── Text / Audio / PDF: emoji thumbnail header ── */}
         {!isVideo && (
           <Box
             sx={{
@@ -237,7 +244,11 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
               {/* ── PDF viewer ── */}
               {isPdf && (
                 <Box sx={{ mb: 2 }}>
-                  {streamUrl ? (
+                  {isTokenLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                      <CircularProgress size={28} />
+                    </Box>
+                  ) : streamUrl ? (
                     <PdfViewer url={streamUrl} />
                   ) : (
                     <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
@@ -250,15 +261,15 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
               {/* ── Audio player ── */}
               {isAudio && (
                 <Box sx={{ mb: content.body ? 2.5 : 0 }}>
-                  {streamUrl ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
-                    <audio
-                      key={streamUrl}
-                      src={streamUrl}
-                      controls
-                      controlsList="nodownload"
-                      style={{ width: '100%' }}
-                    />
+                  {content.hls_ready && Hls.isSupported() ? (
+                    <HlsAudioPlayer contentId={content.id} />
+                  ) : content.file_id && !content.hls_ready ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                      <CircularProgress size={20} />
+                      <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+                        Audio is being processed. Check back shortly.
+                      </Typography>
+                    </Box>
                   ) : (
                     <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
                       No audio attached.

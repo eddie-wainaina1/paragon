@@ -32,6 +32,9 @@ opentelemetry-instrumentation-logging==0.60b1
 sendgrid==6.12.5
 jinja2==3.1.6
 
+# Video transcoding (HLS)
+ffmpeg-python==0.2.0
+
 # Utilities
 python-dotenv==1.2.1
 httpx==0.28.1

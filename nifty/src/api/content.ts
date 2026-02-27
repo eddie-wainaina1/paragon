@@ -26,4 +26,7 @@ export const contentApi = {
   },
 
   getFileUrl: (id: string) => `/api/v1/content/${id}/file`,
+
+  getFileToken: (id: string) =>
+    apiClient.get<{ token: string }>(`/content/${id}/file-token`).then((r) => r.data.token),
 };

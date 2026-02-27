@@ -4,17 +4,22 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Request, status, Depends, UploadFile, File, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status, Depends, UploadFile, File, Query
 from fastapi.responses import Response, StreamingResponse
+from bson import ObjectId
+from jose import JWTError
 
 from app.models.content import Content
 from app.models.user import User
 from app.schemas.content import ContentCreate, ContentUpdate, ContentOut
 from app.utils.deps import CurrentUser, StreamUser, require_roles
+from app.utils.security import create_file_access_token, decode_token
 from app.db import gridfs_put, gridfs_get, gridfs_delete
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.telemetry import get_tracer
 from app.constants import Role, ContentScope
+from app.models.class_ import Class
+from app.utils.transcoding import transcode_to_hls, transcode_audio_to_hls
 
 router = APIRouter(prefix="/content", tags=["content"])
 logger = logging.getLogger(__name__)
@@ -168,6 +173,13 @@ async def delete_content(content_id: str, current_user: CurrentUser):
     if content.file_id:
         gridfs_delete(content.file_id)
 
+    if content.hls_files:
+        for oid_str in content.hls_files.values():
+            gridfs_delete(ObjectId(oid_str))
+
+    # Remove this content from any classes that reference it before deleting
+    Class.objects(unlocked_content=content).update(pull__unlocked_content=content)
+
     content.delete()
     await cache_delete(f"content:{content_id}")
     await cache_delete_pattern("content:list:*")
@@ -176,10 +188,16 @@ async def delete_content(content_id: str, current_user: CurrentUser):
 @router.post("/{content_id}/upload", response_model=ContentOut)
 async def upload_file(
     content_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(require_roles(*Role.creator)),
 ):
-    """Upload a file to GridFS and attach it to the content item."""
+    """Upload a file to GridFS and attach it to the content item.
+
+    For video content, HLS transcoding (360p + 720p) is triggered in the
+    background.  The response returns immediately with ``hls_ready=False``
+    and the field flips to ``True`` once transcoding completes.
+    """
     with tracer.start_as_current_span("content.upload") as span:
         span.set_attribute("content.id", content_id)
         span.set_attribute("file.content_type", file.content_type or "")
@@ -197,30 +215,123 @@ async def upload_file(
                 detail=f"File type '{mime}' is not allowed for {content.type} content",
             )
 
+        logger.info(
+            "File upload started: content=%s filename=%s mime=%s",
+            content_id, file.filename, mime,
+        )
+
+        # Clean up previous raw file
         if content.file_id:
+            logger.info("Removing previous raw file for content %s", content_id)
             gridfs_delete(content.file_id)
+
+        # Clean up previous HLS files on re-upload
+        if content.hls_files:
+            logger.info(
+                "Removing %d previous HLS files for content %s",
+                len(content.hls_files), content_id,
+            )
+            for oid_str in content.hls_files.values():
+                gridfs_delete(ObjectId(oid_str))
 
         file_data = await file.read()
         file_id = gridfs_put(file_data, file.filename, file.content_type)
+        logger.info("File stored in GridFS: content=%s gridfs_id=%s", content_id, file_id)
 
         content.file_id = file_id
         content.file_name = file.filename
         content.file_content_type = file.content_type
+        content.hls_ready = False
+        content.hls_files = {}
         content.updated_at = datetime.now(timezone.utc)
         content.save()
+
+        if content.type == "video":
+            logger.info("HLS transcoding queued for content %s", content_id)
+            background_tasks.add_task(transcode_to_hls, content_id, file_data)
+        elif content.type == "audio":
+            logger.info("Audio HLS transcoding queued for content %s", content_id)
+            background_tasks.add_task(transcode_audio_to_hls, content_id, file_data)
 
         await cache_delete(f"content:{content_id}")
         await cache_delete_pattern("content:list:*")
         return _content_out(content)
 
 
+@router.get("/{content_id}/hls/{filename}")
+async def get_hls_file(
+    content_id: str,
+    filename: str,
+    current_user: CurrentUser,
+):
+    """Serve an HLS manifest or segment file.
+
+    hls.js sends a standard ``Authorization: Bearer`` header for every
+    request (manifest + segments), so no ``?token=`` query param is needed.
+    """
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if not _can_access(content, current_user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
+    if not content.hls_ready:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "HLS not ready")
+
+    oid_str = content.hls_files.get(filename)
+    if not oid_str:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"HLS file not found: {filename}")
+
+    grid_out = gridfs_get(ObjectId(oid_str))
+    data = grid_out.read()
+    media_type = "application/x-mpegURL" if filename.endswith(".m3u8") else "video/mp2t"
+    return Response(content=data, media_type=media_type)
+
+
+@router.get("/{content_id}/file-token")
+async def get_file_token(content_id: str, current_user: CurrentUser):
+    """Issue a short-lived, content-scoped token for streaming a file.
+
+    The returned token is valid for 30 minutes and is bound to this specific
+    content item.  Use it as ``?token=`` on the file streaming endpoint instead
+    of the long-lived session JWT.
+    """
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if not _can_access(content, current_user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
+    if not content.file_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No file attached")
+
+    token = create_file_access_token(str(current_user.id), content_id)
+    return {"token": token}
+
+
 @router.get("/{content_id}/file")
-async def stream_file(content_id: str, request: Request, current_user: StreamUser):
+async def stream_file(
+    content_id: str,
+    request: Request,
+    current_user: StreamUser,
+    token: Optional[str] = Query(None),
+):
     """Stream the GridFS file with HTTP Range support for video/audio playback.
 
     Accepts authentication via Bearer header or ``?token=`` query param so
     that <video>/<audio> src attributes can point directly to this endpoint.
+    When using ``?token=``, the token must be a file-access token issued by
+    ``GET /{content_id}/file-token`` — the long-lived session JWT is rejected
+    to prevent shareable download URLs.
     """
+    # Query-param tokens must be short-lived file-access tokens scoped to this content.
+    # Bearer-header auth (programmatic clients) is unrestricted.
+    if token:
+        try:
+            payload = decode_token(token)
+        except JWTError:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid file token")
+        if payload.get("purpose") != "file_access" or payload.get("cid") != content_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Token is not valid for this file")
+
     content = Content.get_by_id(content_id)
     if not content:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")

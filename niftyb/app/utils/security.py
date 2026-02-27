@@ -65,3 +65,18 @@ def create_password_reset_token(user_id: str) -> str:
         "exp": datetime.now(timezone.utc) + timedelta(hours=1),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def create_file_access_token(user_id: str, content_id: str) -> str:
+    """Create a short-lived JWT for streaming a specific file (30-minute expiry).
+
+    The token is bound to a single content item via the ``cid`` claim so it
+    cannot be reused to access other files.
+    """
+    payload = {
+        "sub": user_id,
+        "purpose": "file_access",
+        "cid": content_id,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)

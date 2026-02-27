@@ -5,6 +5,7 @@ WORKDIR /app
 # Build tools needed to compile native extensions (bcrypt, cryptography, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies directly into the system site-packages

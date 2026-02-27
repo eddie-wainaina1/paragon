@@ -2,7 +2,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
@@ -18,7 +18,10 @@ from app.migrations import run_migrations
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    force=True,
 )
+# Suppress uvicorn's built-in access log — we emit our own below
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def _seed_platform() -> None:
@@ -83,6 +86,14 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# ── Access log middleware ─────────────────────────────────────────────────────
+@app.middleware("http")
+async def _access_log(request: Request, call_next):
+    response = await call_next(request)
+    logger.info("%s %s → %d", request.method, request.url.path, response.status_code)
+    return response
+
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(

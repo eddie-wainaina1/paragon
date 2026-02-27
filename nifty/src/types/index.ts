@@ -45,6 +45,7 @@ export interface Content {
   file_id?: string;
   file_name?: string;
   file_content_type?: string;
+  hls_ready?: boolean;
   views: number;
   locked: boolean;
   emoji: string;

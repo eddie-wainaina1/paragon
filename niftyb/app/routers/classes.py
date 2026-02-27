@@ -227,7 +227,11 @@ async def list_class_content(class_id: str, current_user: CurrentUser):
     else:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
 
-    return [ContentOut(**c.to_dict()) for c in cls.unlocked_content]
+    # Reload with select_related so stale DBRefs (deleted content still
+    # referenced by the class) are silently skipped rather than crashing.
+    cls.reload()
+    resolved = [c for c in cls.unlocked_content if hasattr(c, "to_dict")]
+    return [ContentOut(**c.to_dict()) for c in resolved]
 
 
 @router.post("/{class_id}/content", response_model=ClassDetailOut)

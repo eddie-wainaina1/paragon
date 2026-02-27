@@ -175,11 +175,11 @@ install-backend: ## Create .venv and pip install inside niftyb/
 	cd $(BACKEND_DIR) && python3 -m venv .venv && .venv/bin/pip install --upgrade pip -q && .venv/bin/pip install -r requirements.txt
 
 .PHONY: dev
-dev: ## Start frontend (Vite :5173) and backend (uvicorn :8000) in parallel
+dev: ## Start frontend (Vite :3000) and backend (uvicorn :8000) in parallel
 	$(MAKE) -j2 dev-frontend dev-backend
 
 .PHONY: dev-frontend
-dev-frontend: ## Start Vite dev server on port 5173
+dev-frontend: ## Start Vite dev server on port 3000
 	cd $(FRONTEND_DIR) && npm run dev
 
 .PHONY: dev-backend

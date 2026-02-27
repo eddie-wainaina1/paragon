@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from mongoengine import Q, Document, StringField, ReferenceField, ObjectIdField, IntField, BooleanField, DateTimeField
+from mongoengine import Q, Document, StringField, ReferenceField, ObjectIdField, IntField, BooleanField, DateTimeField, DictField
 from app.models.organization import Organization
 from app.models.user import User
 from app.constants import ContentType, ContentScope, ContentEmoji, Role
@@ -25,6 +25,8 @@ class Content(Document):
     file_id = ObjectIdField()  # GridFS reference for uploaded files
     file_name = StringField()
     file_content_type = StringField()
+    hls_ready = BooleanField(default=False)
+    hls_files = DictField(default=dict)  # {"master.m3u8": "<oid>", "720p_000.ts": "<oid>", ...}
     views = IntField(default=0, min_value=0)
     locked = BooleanField(default=False)
     emoji = StringField(max_length=10)
@@ -66,6 +68,7 @@ class Content(Document):
             "author_name": self.author.name if self.author else None,
             "subject": self.subject,
             "body": self.body,
+            "hls_ready": self.hls_ready,
             "file_id": str(self.file_id) if self.file_id else None,
             "file_name": self.file_name,
             "file_content_type": self.file_content_type,

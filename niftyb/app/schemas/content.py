@@ -34,6 +34,7 @@ class ContentOut(BaseModel):
     author_name: Optional[str]
     subject: Optional[str]
     body: Optional[str]
+    hls_ready: bool = False
     file_id: Optional[str]
     file_name: Optional[str]
     file_content_type: Optional[str]
