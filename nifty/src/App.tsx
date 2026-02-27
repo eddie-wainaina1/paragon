@@ -12,6 +12,7 @@ import Users from '@/pages/Users';
 import Organizations from '@/pages/Organizations';
 import Profile from '@/pages/Profile';
 import ResetPassword from '@/pages/ResetPassword';
+import Terms from '@/pages/Terms';
 import { useAuthStore } from '@/store/authStore';
 
 function AuthRedirect() {
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
       </Route>
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/terms" element={<Terms />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

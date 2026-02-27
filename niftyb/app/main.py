@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
@@ -45,6 +46,9 @@ def _seed_platform() -> None:
         org.internal = True
         org.save()
 
+    from datetime import datetime, timezone as _tz
+    now = datetime.now(_tz.utc)
+
     existing_admin = User.objects(email=settings.superadmin_email).first()
     if not existing_admin:
         User(
@@ -55,12 +59,21 @@ def _seed_platform() -> None:
             org=org,
             avatar="SA",
             verified=True,
+            terms_accepted_at=now,
         ).save()
         logger.info("Seed super_admin created", extra={"email": settings.superadmin_email})
-    elif not existing_admin.verified:
-        existing_admin.verified = True
-        existing_admin.save()
-        logger.info("Seed super_admin verified (idempotent fix)")
+    else:
+        changed = False
+        if not existing_admin.verified:
+            existing_admin.verified = True
+            changed = True
+            logger.info("Seed super_admin verified (idempotent fix)")
+        if not existing_admin.terms_accepted_at:
+            existing_admin.terms_accepted_at = now
+            changed = True
+            logger.info("Seed super_admin terms accepted (idempotent fix)")
+        if changed:
+            existing_admin.save()
 
 
 @asynccontextmanager
@@ -86,6 +99,40 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# ── Terms enforcement middleware ──────────────────────────────────────────────
+_TERMS_EXEMPT_PREFIXES = (
+    "/api/v1/auth/",
+    "/api/v1/users/me/accept-terms",
+    "/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+)
+
+
+@app.middleware("http")
+async def _enforce_terms(request: Request, call_next):
+    """Block authenticated users who have not yet accepted the Terms of Service."""
+    path = request.url.path
+    if not any(path.startswith(p) for p in _TERMS_EXEMPT_PREFIXES):
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            try:
+                from jose import JWTError
+                from app.utils.security import decode_token
+                from app.models.user import User as _User
+                payload = decode_token(auth_header[7:])
+                user = _User.objects(id=payload.get("sub")).first()
+                if user and not user.terms_accepted_at:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "terms_not_accepted"},
+                    )
+            except Exception:
+                pass  # Malformed tokens are handled by the auth dependencies
+    return await call_next(request)
+
 
 # ── Access log middleware ─────────────────────────────────────────────────────
 @app.middleware("http")

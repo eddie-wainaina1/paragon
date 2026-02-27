@@ -21,6 +21,7 @@ class User(Document):
     avatar = StringField(max_length=4, default="?")  # initials
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     verified = BooleanField(default=False)
+    terms_accepted_at = DateTimeField(default=None)
 
     # ── Queries ──────────────────────────────────────────────────────────────
 
@@ -65,4 +66,5 @@ class User(Document):
             "avatar": self.avatar,
             "created_at": self.created_at.isoformat(),
             "verified": bool(self.verified),
+            "terms_accepted_at": self.terms_accepted_at.isoformat() if self.terms_accepted_at else None,
         }

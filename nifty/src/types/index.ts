@@ -29,6 +29,7 @@ export interface User {
   avatar: string;
   verified: boolean;
   created_at: string;
+  terms_accepted_at: string | null;
 }
 
 export interface Content {

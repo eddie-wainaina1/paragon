@@ -29,9 +29,14 @@ class UserOut(BaseModel):
     avatar: str
     created_at: datetime
     verified: bool = False
+    terms_accepted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class AcceptTermsRequest(BaseModel):
+    accept: bool
 
 
 class RegisterOrgRequest(BaseModel):

@@ -12,8 +12,10 @@ import {
   Alert,
   CircularProgress,
   Divider,
+  Link as MuiLink,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { Link as RouterLink } from 'react-router-dom';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 
@@ -300,9 +302,16 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               fullWidth
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
-              sx={{ mb: 3 }}
+              sx={{ mb: 2 }}
               required
             />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              By creating an account, you agree to our{' '}
+              <MuiLink component={RouterLink} to="/terms" target="_blank" rel="noopener">
+                Terms of Service
+              </MuiLink>
+              . You will be asked to formally accept them on first sign-in.
+            </Typography>
             <Button
               type="submit"
               variant="contained"

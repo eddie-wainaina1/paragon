@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException, status, Depends
 
 from app.models.user import User
 from app.models.organization import Organization
-from app.schemas.user import UserCreate, UserUpdate, UserOut
+from datetime import datetime, timezone
+from app.schemas.user import UserCreate, UserUpdate, UserOut, AcceptTermsRequest
 from app.utils.security import hash_password, create_verification_token
 from app.utils.deps import CurrentUser, require_roles
 from app.email import send_welcome_email
@@ -66,6 +67,21 @@ async def update_me(body: UserUpdate, current_user: CurrentUser):
     await cache_delete(f"users:list:{user.org.id}")
     await cache_delete("users:list:all")
     await cache_delete(f"user:{str(user.id)}")
+    return _user_out(user)
+
+
+@router.post("/me/accept-terms", response_model=UserOut)
+async def accept_terms(body: AcceptTermsRequest, current_user: CurrentUser):
+    """Record that the current user has accepted the Terms of Service."""
+    if not body.accept:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You must accept the terms")
+    user = User.get_by_id(str(current_user.id))
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    user.terms_accepted_at = datetime.now(timezone.utc)
+    user.save()
+    await cache_delete(f"users:list:{user.org.id}")
+    await cache_delete("users:list:all")
     return _user_out(user)
 
 

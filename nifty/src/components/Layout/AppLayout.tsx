@@ -3,9 +3,11 @@ import { Outlet, Navigate } from 'react-router-dom';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
 import { useAuthStore } from '@/store/authStore';
+import TermsModal from '@/components/Terms/TermsModal';
 
 export default function AppLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const user = useAuthStore((s) => s.user);
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -28,6 +30,7 @@ export default function AppLayout() {
           <Outlet />
         </Box>
       </Box>
+      <TermsModal open={!!user && !user.terms_accepted_at} />
     </Box>
   );
 }

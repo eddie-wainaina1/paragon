@@ -16,4 +16,7 @@ export const usersApi = {
     apiClient.put<User>(`/users/${id}`, data).then((r) => r.data),
 
   remove: (id: string) => apiClient.delete(`/users/${id}`),
+
+  acceptTerms: () =>
+    apiClient.post<User>('/users/me/accept-terms', { accept: true }).then((r) => r.data),
 };
