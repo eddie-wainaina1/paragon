@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { LoginRequest, RegisterOrgRequest, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest } from '@/types';
+import type { LoginRequest, RegisterOrgRequest, RegisterIndividualRequest, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest } from '@/types';
 
 export const authApi = {
   login: (data: LoginRequest) =>
@@ -7,6 +7,9 @@ export const authApi = {
 
   registerOrg: (data: RegisterOrgRequest) =>
     apiClient.post<TokenResponse>('/auth/register-org', data).then((r) => r.data),
+
+  registerIndividual: (data: RegisterIndividualRequest) =>
+    apiClient.post<TokenResponse>('/auth/register-individual', data).then((r) => r.data),
 
   impersonate: (userId: string) =>
     apiClient.post<TokenResponse>(`/auth/impersonate/${userId}`).then((r) => r.data),

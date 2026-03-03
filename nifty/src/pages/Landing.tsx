@@ -14,7 +14,7 @@ const ROLES = ['🏫 Organizations', '👩‍🏫 Teachers', '🎓 Students', '�
 
 export default function Landing() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [initialTab, setInitialTab] = useState<'login' | 'register'>('login');
+  const [initialTab, setInitialTab] = useState<'login' | 'register' | 'individual'>('login');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
   const navigate = useNavigate();
 
@@ -25,6 +25,11 @@ export default function Landing() {
 
   const openRegister = () => {
     setInitialTab('register');
+    setModalOpen(true);
+  };
+
+  const openIndividual = () => {
+    setInitialTab('individual');
     setModalOpen(true);
   };
 
@@ -180,6 +185,25 @@ export default function Landing() {
           }}
         >
           Register Organization
+        </Button>
+        <Button
+          variant="outlined"
+          size="large"
+          onClick={openIndividual}
+          sx={{
+            borderColor: 'rgba(255,255,255,0.75)',
+            color: '#fff',
+            fontWeight: 700,
+            px: 4,
+            py: 1.4,
+            fontSize: '1rem',
+            '&:hover': {
+              background: 'rgba(255,255,255,0.18)',
+              borderColor: '#fff',
+            },
+          }}
+        >
+          Join as Individual
         </Button>
       </Box>
 

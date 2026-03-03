@@ -76,6 +76,22 @@ def _seed_platform() -> None:
             existing_admin.save()
 
 
+def _seed_academy() -> None:
+    """Ensure the shared 'Nifty Academy' school org exists for individual sign-ups."""
+    from app.models.organization import Organization
+    from app.constants import OrgType
+
+    org = Organization.objects(slug="nifty-academy").first()
+    if not org:
+        Organization(
+            name="Nifty Academy",
+            slug="nifty-academy",
+            type=OrgType.school,
+            internal=False,
+        ).save()
+        logger.info("Academy org 'nifty-academy' created")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────────────
@@ -84,6 +100,7 @@ async def lifespan(app: FastAPI):
     RedisInstrumentor().instrument()
     connect_db()
     _seed_platform()
+    _seed_academy()
     run_migrations()
     logger.info("Nifty backend started", extra={"env": settings.app_env})
     yield

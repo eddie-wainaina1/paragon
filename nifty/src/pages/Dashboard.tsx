@@ -65,7 +65,7 @@ function ClassCard({ cls, action }: { cls: import('@/types').Class; action?: Rea
           {cls.teacher_name ?? 'Unknown teacher'}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {cls.unlocked_content_count} lesson{cls.unlocked_content_count !== 1 ? 's' : ''} · {cls.student_count} student{cls.student_count !== 1 ? 's' : ''}
+          {cls.content_count} lesson{cls.content_count !== 1 ? 's' : ''} · {cls.student_count} student{cls.student_count !== 1 ? 's' : ''}
         </Typography>
         {action && <Box sx={{ mt: 1.5 }}>{action}</Box>}
       </CardContent>

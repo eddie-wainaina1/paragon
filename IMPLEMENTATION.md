@@ -73,7 +73,7 @@ Roles are the central concept governing what each user can see and do.
 ### Startup & Lifecycle (`app/main.py`)
 
 - Creates the FastAPI app instance
-- On startup: initializes OpenTelemetry, instruments PyMongo + Redis, connects to MongoDB, calls `_seed_platform()` to ensure the "nifty" internal org and default super_admin exist, then runs migrations
+- On startup: initializes OpenTelemetry, instruments PyMongo + Redis, connects to MongoDB, calls `_seed_platform()` to ensure the "nifty" internal org and default super_admin exist, calls `_seed_academy()` to ensure the "Nifty Academy" school org (slug: `nifty-academy`) exists for individual sign-ups, then runs migrations
 - On shutdown: disconnects MongoDB
 - Mounts all routers under `/api/v1`
 - Registers CORS middleware (origins from `CORS_ORIGINS` env var)
@@ -219,7 +219,7 @@ Collection: `content` | Indexes: `org`, `author`, `scope`, `type`
 
 Key methods: `get_by_id`, `list_visible_to(user)`, `increment_views`, `delete_by_org`
 
-#### `class_.py` — `Class`
+#### `class_.py` — `Class` + `ClassContentItem`
 
 Collection: `classes` | Indexes: `org`, `teacher`
 
@@ -231,10 +231,24 @@ Collection: `classes` | Indexes: `org`, `teacher`
 | `teacher` | ref → User | |
 | `org` | ref → Organization | |
 | `students` | list[ref → User] | Enrolled students |
-| `unlocked_content` | list[ref → Content] | Content assigned to this class |
+| `content_items` | list[ClassContentItem] | Ordered embedded docs; list index = display order |
 | `created_at` | datetime | |
 
+**`ClassContentItem` (EmbeddedDocument)**: `content: ref → Content`, `blocking: bool` — if True, students cannot access subsequent items until this one is completed.
+
 Key methods: `get_by_id`, `list_for_user(user)`, `list_available_for_student(student)`, `get_enrolled_ids(student)`
+
+#### `student_progress.py` — `StudentProgress`
+
+Collection: `student_progress` | Indexes: `(student, class_)`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `student` | ref → User | |
+| `class_` | ref → Class | |
+| `completed_content` | list[ref → Content] | Content items the student has completed |
+
+Key methods: `get_or_create(student, class_)`, `complete(content)`, `uncomplete(content)`, `completed_ids()`, `delete_by_class`, `delete_by_student`, `delete_by_student_in_class`, `get_all_for_class`
 
 ---
 
@@ -245,7 +259,7 @@ Pydantic v2 models for request/response validation. One file per domain:
 - `user.py` — `LoginRequest`, `RegisterOrgRequest`, `UserCreate`, `UserUpdate`, `UserOut`, `TokenResponse`, `ForgotPasswordRequest`, `ResetPasswordRequest`
 - `organization.py` — `OrgCreate`, `OrgUpdate`, `OrgOut`
 - `content.py` — `ContentCreate`, `ContentUpdate`, `ContentOut`
-- `class_.py` — `ClassCreate`, `ClassUpdate`, `ClassOut`, `ClassDetailOut` (includes student/content ID lists), `AddStudentRequest`, `AddContentRequest`
+- `class_.py` — `ClassCreate`, `ClassUpdate`, `ClassOut`, `ClassDetailOut` (includes `students` + `content_items`), `ClassContentItemSimple`, `ClassContentDetailOut` (enriched content with blocking/order/completed/accessible), `AddStudentRequest`, `AddContentRequest` (+ `blocking` flag), `UpdateContentItemRequest` (blocking/order), `StudentProgressOut`, `ClassProgressOut`
 
 ---
 
@@ -259,6 +273,7 @@ All routers mount under `/api/v1`.
 |--------|------|------|-------------|
 | POST | `/login` | public | Email + password → JWT + UserOut |
 | POST | `/register-org` | public | Creates org + org_admin, sends verification email, returns JWT |
+| POST | `/register-individual` | public | Registers user as `student` in the "Nifty Academy" org, sends verification email, returns JWT |
 | GET | `/verify-email?token=` | public | Consumes one-time JWT, sets `verified=True`, redirects to frontend |
 | POST | `/forgot-password` | public | Sends reset email (always 200, prevents enumeration) |
 | POST | `/reset-password` | public | Consumes reset JWT, sets new password |
@@ -288,9 +303,9 @@ All routers mount under `/api/v1`.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/` | any | List content visible to user (filters: type, scope); Redis cached |
+| GET | `/` | any (students: always empty) | List content visible to user (filters: type, scope); Redis cached; students return empty — they access content via classes only |
 | POST | `/` | creator | Create content item |
-| GET | `/{id}` | any | Get content + increment view count; Redis cached |
+| GET | `/{id}` | any | Get content + increment view count; Redis cached; students: must be enrolled in a class containing this content and have cleared all blocking prerequisites |
 | PUT | `/{id}` | author or admin | Update content fields |
 | DELETE | `/{id}` | author or admin | Delete content + GridFS file |
 | POST | `/{id}/upload` | creator (author) | Upload file to GridFS (replaces existing); validates MIME vs content type; triggers HLS transcoding in background for `video` and `audio` types |
@@ -313,20 +328,28 @@ All routers mount under `/api/v1`.
 | GET | `/` | any | List classes visible to user |
 | GET | `/available` | student | Classes in own org not yet enrolled in |
 | POST | `/` | manager | Create class |
-| GET | `/{id}` | any | Class detail (includes student/content ID lists) |
+| GET | `/{id}` | any | Class detail (includes students + content_items) |
 | PUT | `/{id}` | manager (teacher/admin) | Update name/grade |
-| DELETE | `/{id}` | manager (teacher/admin) | Delete class |
+| DELETE | `/{id}` | manager (teacher/admin) | Delete class + cascade progress |
 | POST | `/{id}/students` | manager | Enroll a student |
-| DELETE | `/{id}/students/{uid}` | manager | Remove a student |
+| DELETE | `/{id}/students/{uid}` | manager | Remove a student + their progress |
 | POST | `/{id}/subscribe` | student | Self-subscribe to a class |
-| DELETE | `/{id}/subscribe` | student | Self-unsubscribe |
-| GET | `/{id}/content` | teacher/admin/enrolled student | List class content |
-| POST | `/{id}/content` | manager (teacher/admin) | Add content item to class |
+| DELETE | `/{id}/subscribe` | student | Self-unsubscribe + delete own progress |
+| GET | `/{id}/content` | any who can see class | Ordered content list; enrolled students get `completed`/`accessible` flags; unenrolled students get preview (accessible=False); managers get full access |
+| POST | `/{id}/content` | manager (teacher/admin) | Add content item with optional `blocking` flag |
+| PATCH | `/{id}/content/{cid}` | manager (teacher/admin) | Update `blocking` flag or `order` (reposition) |
 | DELETE | `/{id}/content/{cid}` | manager (teacher/admin) | Remove content from class |
+| POST | `/{id}/content/{cid}/complete` | student (enrolled) | Mark content as completed; enforces blocking rules |
+| DELETE | `/{id}/content/{cid}/complete` | student | Unmark completion |
+| GET | `/{id}/progress` | teacher, org_admin, super_admin, tutor | Student progress: names, completion counts, completed IDs |
 
 ---
 
 ### Utils (`app/utils/`)
+
+#### `class_access.py`
+
+- `is_content_accessible(content_items, target_content_id, completed_ids)` → bool — shared blocking-rule checker: returns True if no prior blocking item is incomplete. Used by both `classes.py` and `content.py` routers.
 
 #### `transcoding.py`
 
@@ -485,6 +508,7 @@ Zustand store for dark/light mode preference, persisted to `localStorage`.
 
 - `login(email, password)` → `TokenResponse`
 - `registerOrg(data)` → `TokenResponse`
+- `registerIndividual(data)` → `TokenResponse`
 - `forgotPassword(email)` → void
 - `resetPassword(token, newPassword)` → void
 
@@ -527,9 +551,13 @@ Zustand store for dark/light mode preference, persisted to `localStorage`.
 - `removeStudent(classId, userId)` → `Class`
 - `subscribe(classId)` → `Class`
 - `unsubscribe(classId)` → void
-- `getContent(classId)` → `Content[]`
-- `addContent(classId, contentId)` → `Class`
+- `getContent(classId)` → `ClassContentDetail[]` (ordered; includes blocking/order/completed/accessible)
+- `addContent(classId, contentId, blocking?)` → `Class`
+- `updateContentItem(classId, contentId, {blocking?, order?})` → `Class`
 - `removeContent(classId, contentId)` → `Class`
+- `markComplete(classId, contentId)` → `{message}`
+- `unmarkComplete(classId, contentId)` → `{message}`
+- `getProgress(classId)` → `ClassProgressOut`
 
 ---
 
@@ -542,9 +570,9 @@ Authenticated shell. Renders `Sidebar` on the left, `Topbar` at the top, and `<O
 #### `Sidebar.tsx`
 
 Role-aware navigation. Calls `getNavSections(role)` which builds nav sections:
-- **General** (all roles): Dashboard, Content Library
+- **General** (all roles): Dashboard; Content Library (not shown to students)
 - **Content** (creator roles): Create Content, My Content
-- **Classes** (manager roles): Classes
+- **Classes** (students): My Classes; (manager roles): Classes
 - **Management** (admin roles): Users; super_admin also sees Organizations
 - **Account** (all): Settings/Profile
 
@@ -567,8 +595,9 @@ Active route highlighted with orange gradient background.
 MUI `Dialog` with two tabs: **Login** and **Register**.
 
 - **Login tab**: email + password form; calls `login()`, stores result in `authStore`; handles email not verified error with a friendly message
-- **Register tab**: org name, first/last name, email, password form; calls `registerOrg()`, stores result
-- Shown from the Landing page when user clicks "Sign In" or "Register"
+- **Register Organization tab**: org name, first/last name, email, password form; calls `registerOrg()`, stores result
+- **Join as Individual tab**: first/last name, email, password form; calls `registerIndividual()`, registers user as `student` in "Nifty Academy"
+- Shown from the Landing page when user clicks "Sign In", "Register Organization", or "Join as Individual"
 
 ---
 

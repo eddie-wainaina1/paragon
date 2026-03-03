@@ -257,7 +257,7 @@ export default function Classes() {
                       />
                     </TableCell>
                     <TableCell>👤 {c.student_count}</TableCell>
-                    <TableCell>📚 {c.unlocked_content_count}</TableCell>
+                    <TableCell>📚 {c.content_count}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button

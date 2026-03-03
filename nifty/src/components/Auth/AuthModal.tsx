@@ -19,44 +19,52 @@ import { Link as RouterLink } from 'react-router-dom';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 
-type ModalView = 'login' | 'register' | 'forgot';
+type TabValue = 'login' | 'register' | 'individual';
+type ModalView = 'login' | 'register' | 'individual' | 'forgot';
 
 interface Props {
   open: boolean;
-  initialTab?: 'login' | 'register';
+  initialTab?: TabValue;
   onClose: () => void;
 }
 
 export default function AuthModal({ open, initialTab = 'login', onClose }: Props) {
-  const [tab, setTab] = useState<'login' | 'register'>(initialTab);
+  const [tab, setTab] = useState<TabValue>(initialTab);
   const [view, setView] = useState<ModalView>(initialTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [indSuccess, setIndSuccess] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   // Login form state
-  const [email, setEmail] = useState<string>('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Register form state
+  // Register org form state
   const [orgName, setOrgName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
+  // Individual sign-up form state
+  const [indFirstName, setIndFirstName] = useState('');
+  const [indLastName, setIndLastName] = useState('');
+  const [indEmail, setIndEmail] = useState('');
+  const [indPassword, setIndPassword] = useState('');
+
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState('');
 
-  // Sync tab + reset form whenever the modal opens or initialTab changes
   useEffect(() => {
     if (open) {
       setTab(initialTab);
       setView(initialTab);
       setError('');
       setRegisterSuccess(false);
+      setIndSuccess(false);
       setForgotSuccess(false);
       setEmail('');
       setPassword('');
@@ -65,21 +73,26 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
       setLastName('');
       setRegEmail('');
       setRegPassword('');
+      setIndFirstName('');
+      setIndLastName('');
+      setIndEmail('');
+      setIndPassword('');
       setForgotEmail('');
     }
   }, [open, initialTab]);
 
-  const handleTabChange = (_: React.SyntheticEvent, v: 'login' | 'register') => {
+  const handleTabChange = (_: React.SyntheticEvent, v: TabValue) => {
     setTab(v);
     setView(v);
     setError('');
     setRegisterSuccess(false);
+    setIndSuccess(false);
     setForgotSuccess(false);
   };
 
   const switchView = (v: ModalView) => {
     setView(v);
-    if (v === 'login' || v === 'register') setTab(v);
+    if (v === 'login' || v === 'register' || v === 'individual') setTab(v);
     setError('');
     setForgotSuccess(false);
   };
@@ -134,6 +147,37 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     }
   };
 
+  const handleRegisterIndividual = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    if (!indFirstName || !indEmail || !indPassword) {
+      setError('Please fill all required fields');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await authApi.registerIndividual({
+        first_name: indFirstName,
+        last_name: indLastName,
+        email: indEmail,
+        password: indPassword,
+      });
+      if (res.user.verified === false) {
+        setIndSuccess(true);
+      } else {
+        setAuth(res.user, res.access_token);
+        onClose();
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Registration failed';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
@@ -170,6 +214,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
             <Tabs value={tab} onChange={handleTabChange}>
               <Tab label="Sign In" value="login" sx={{ fontWeight: 700 }} />
               <Tab label="Register Organization" value="register" sx={{ fontWeight: 700 }} />
+              <Tab label="Join as Individual" value="individual" sx={{ fontWeight: 700 }} />
             </Tabs>
           ) : (
             <Typography fontWeight={700} fontSize="0.95rem" color="text.secondary" sx={{ pl: 1 }}>
@@ -243,6 +288,14 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
                 onClick={() => switchView('register')}
               >
                 Register Organization
+              </Box>
+              {' · '}
+              <Box
+                component="span"
+                sx={{ color: 'primary.main', fontWeight: 700, cursor: 'pointer' }}
+                onClick={() => switchView('individual')}
+              >
+                Join as Individual
               </Box>
             </Typography>
           </Box>
@@ -322,6 +375,83 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
             >
               Create Organization →
+            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+              Already have an account?{' '}
+              <Box
+                component="span"
+                sx={{ color: 'primary.main', fontWeight: 700, cursor: 'pointer' }}
+                onClick={() => switchView('login')}
+              >
+                Sign In
+              </Box>
+            </Typography>
+          </Box>
+        )}
+
+        {/* ── JOIN AS INDIVIDUAL ── */}
+        {view === 'individual' && (
+          <Box component="form" onSubmit={handleRegisterIndividual}>
+            <Typography variant="h5" sx={{ mb: 0.5 }}>
+              Join Nifty Academy 🎓
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Sign up as an individual learner — you'll be enrolled in Nifty Academy
+            </Typography>
+
+            {indSuccess && (
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                Account created — please check your email to verify your account before logging in.
+              </Alert>
+            )}
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+              <TextField
+                label="First Name"
+                value={indFirstName}
+                onChange={(e) => setIndFirstName(e.target.value)}
+                required
+              />
+              <TextField
+                label="Last Name"
+                value={indLastName}
+                onChange={(e) => setIndLastName(e.target.value)}
+              />
+            </Box>
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              value={indEmail}
+              onChange={(e) => setIndEmail(e.target.value)}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              label="Password"
+              type="password"
+              fullWidth
+              value={indPassword}
+              onChange={(e) => setIndPassword(e.target.value)}
+              sx={{ mb: 2 }}
+              required
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              By creating an account, you agree to our{' '}
+              <MuiLink component={RouterLink} to="/terms" target="_blank" rel="noopener">
+                Terms of Service
+              </MuiLink>
+              . You will be asked to formally accept them on first sign-in.
+            </Typography>
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+            >
+              Join Nifty Academy →
             </Button>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
               Already have an account?{' '}

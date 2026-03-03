@@ -17,15 +17,16 @@ interface NavSection {
 }
 
 function getNavSections(role: RoleType): NavSection[] {
-  const sections: NavSection[] = [
-    {
-      section: 'General',
-      items: [
-        { id: 'dashboard', icon: '🏠', label: 'Dashboard', path: '/app/dashboard' },
-        { id: 'content_browse', icon: '📚', label: 'Content Library', path: '/app/content' },
-      ],
-    },
+  const isStudent = role === 'student';
+
+  const generalItems: NavItem[] = [
+    { id: 'dashboard', icon: '🏠', label: 'Dashboard', path: '/app/dashboard' },
   ];
+  if (!isStudent) {
+    generalItems.push({ id: 'content_browse', icon: '📚', label: 'Content Library', path: '/app/content' });
+  }
+
+  const sections: NavSection[] = [{ section: 'General', items: generalItems }];
 
   if ((Role.creator as readonly string[]).includes(role)) {
     sections.push({
@@ -37,7 +38,12 @@ function getNavSections(role: RoleType): NavSection[] {
     });
   }
 
-  if ((Role.manager as readonly string[]).includes(role)) {
+  if (isStudent) {
+    sections.push({
+      section: 'Classes',
+      items: [{ id: 'classes', icon: '🎓', label: 'My Classes', path: '/app/classes' }],
+    });
+  } else if ((Role.manager as readonly string[]).includes(role)) {
     sections.push({
       section: 'Classes',
       items: [

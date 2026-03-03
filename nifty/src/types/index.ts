@@ -56,6 +56,35 @@ export interface Content {
 
 export type ClassScope = 'global' | 'org';
 
+export interface ClassContentItemSimple {
+  content_id: string;
+  blocking: boolean;
+  order: number;
+}
+
+export interface ClassContentDetail extends Content {
+  content_id: string;
+  blocking: boolean;
+  order: number;
+  completed: boolean;
+  accessible: boolean;
+}
+
+export interface StudentProgressOut {
+  student_id: string;
+  student_name: string;
+  student_avatar: string;
+  completed_count: number;
+  total_count: number;
+  completed_content_ids: string[];
+}
+
+export interface ClassProgressOut {
+  class_id: string;
+  total_content: number;
+  students: StudentProgressOut[];
+}
+
 export interface Class {
   id: string;
   name: string;
@@ -66,10 +95,10 @@ export interface Class {
   org: string;
   org_name?: string;
   student_count: number;
-  unlocked_content_count: number;
+  content_count: number;
   created_at: string;
   students?: string[];
-  unlocked_content?: string[];
+  content_items?: ClassContentItemSimple[];
 }
 
 export interface TokenResponse {
@@ -87,6 +116,13 @@ export interface RegisterOrgRequest {
   org_name: string;
   admin_first: string;
   admin_last?: string;
+  email: string;
+  password: string;
+}
+
+export interface RegisterIndividualRequest {
+  first_name: string;
+  last_name?: string;
   email: string;
   password: string;
 }

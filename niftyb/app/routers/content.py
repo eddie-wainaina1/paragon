@@ -59,6 +59,10 @@ async def list_content(
     scope: Optional[str] = Query(None),
 ):
     with tracer.start_as_current_span("content.list"):
+        # Students access content exclusively through their enrolled classes
+        if current_user.role == Role.student:
+            return []
+
         cache_key = f"content:list:{current_user.role}:{current_user.org.id}:{type}:{scope}"
         cached = await cache_get(cache_key)
         if cached:
@@ -121,6 +125,29 @@ async def get_content(content_id: str, current_user: CurrentUser):
         if not _can_access(content, current_user):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
 
+        # Students must be enrolled in a class containing this content
+        # and must have cleared all blocking prerequisites in that class
+        if current_user.role == Role.student:
+            from app.models.student_progress import StudentProgress
+            from app.utils.class_access import is_content_accessible
+            enrolled_classes = Class.objects(students=current_user)
+            accessible_in_any = False
+            for cls in enrolled_classes:
+                item_ids = {
+                    str(item.content.id)
+                    for item in cls.content_items
+                    if hasattr(item.content, "id")
+                }
+                if content_id not in item_ids:
+                    continue
+                progress = StudentProgress.objects(student=current_user, class_=cls).first()
+                completed_ids = progress.completed_ids() if progress else set()
+                if is_content_accessible(cls.content_items, content_id, completed_ids):
+                    accessible_in_any = True
+                    break
+            if not accessible_in_any:
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "Content not accessible")
+
         content.views += 1
         content.save()
         result = _content_out(content).model_dump()
@@ -178,7 +205,12 @@ async def delete_content(content_id: str, current_user: CurrentUser):
             gridfs_delete(ObjectId(oid_str))
 
     # Remove this content from any classes that reference it before deleting
-    Class.objects(unlocked_content=content).update(pull__unlocked_content=content)
+    for cls in Class.objects(content_items__content=content):
+        cls.content_items = [
+            item for item in cls.content_items
+            if not (hasattr(item.content, "id") and str(item.content.id) == content_id)
+        ]
+        cls.save()
 
     content.delete()
     await cache_delete(f"content:{content_id}")

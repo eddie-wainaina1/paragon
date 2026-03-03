@@ -1,23 +1,27 @@
-"""Class CRUD and student enrollment endpoints."""
+"""Class CRUD, student enrollment, ordered content management, and progress tracking."""
 
 import logging
 from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 
-from app.models.class_ import Class
+from app.models.class_ import Class, ClassContentItem
 from app.models.user import User
 from app.models.content import Content
+from app.models.student_progress import StudentProgress
 from app.schemas.class_ import (
     ClassCreate,
     ClassUpdate,
     ClassOut,
     ClassDetailOut,
+    ClassContentDetailOut,
     AddStudentRequest,
     AddContentRequest,
+    UpdateContentItemRequest,
+    ClassProgressOut,
+    StudentProgressOut,
 )
-from app.schemas.content import ContentOut
 from app.utils.deps import CurrentUser, require_roles
-from app.cache import cache_delete, cache_delete_pattern
+from app.utils.class_access import is_content_accessible
 from app.telemetry import get_tracer
 from app.constants import Role, ClassScope, ContentScope
 
@@ -29,6 +33,18 @@ tracer = get_tracer(__name__)
 def _class_out(c: Class, detail: bool = False) -> ClassOut | ClassDetailOut:
     d = c.to_dict(include_students=detail)
     return ClassDetailOut(**d) if detail else ClassOut(**d)
+
+
+def _can_manage(cls: Class, user: User) -> bool:
+    return user.role in Role.admin or str(cls.teacher.id) == str(user.id)
+
+
+def _can_see_class(cls: Class, user: User) -> bool:
+    if user.role == Role.super_admin:
+        return True
+    if cls.scope == ClassScope.global_scope:
+        return True
+    return str(cls.org.id) == str(user.org.id)
 
 
 @router.get("", response_model=List[ClassOut])
@@ -75,11 +91,7 @@ async def get_class(class_id: str, current_user: CurrentUser):
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-    if (
-        current_user.role != Role.super_admin
-        and cls.scope != ClassScope.global_scope
-        and str(cls.org.id) != str(current_user.org.id)
-    ):
+    if not _can_see_class(cls, current_user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
     return _class_out(cls, detail=True)
 
@@ -93,7 +105,7 @@ async def update_class(
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-    if current_user.role not in Role.admin and str(cls.teacher.id) != str(current_user.id):
+    if not _can_manage(cls, current_user):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Only the class teacher or admin can update"
         )
@@ -114,8 +126,9 @@ async def delete_class(
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-    if current_user.role not in Role.admin and str(cls.teacher.id) != str(current_user.id):
+    if not _can_manage(cls, current_user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+    StudentProgress.delete_by_class(cls)
     cls.delete()
 
 
@@ -152,8 +165,11 @@ async def remove_student(
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
 
+    student = User.get_by_id(user_id)
     cls.students = [s for s in cls.students if str(s.id) != user_id]
     cls.save()
+    if student:
+        StudentProgress.delete_by_student_in_class(student, cls)
     return _class_out(cls, detail=True)
 
 
@@ -203,35 +219,73 @@ async def unsubscribe_from_class(class_id: str, current_user: CurrentUser):
 
     cls.students = [s for s in cls.students if str(s.id) != str(current_user.id)]
     cls.save()
+    StudentProgress.delete_by_student_in_class(current_user, cls)
 
 
 # ── Class content management ──────────────────────────────────────────────────
 
 
-@router.get("/{class_id}/content", response_model=List[ContentOut])
+def _build_content_detail(item, order: int, completed: bool, accessible: bool) -> dict:
+    c = item.content
+    d = c.to_dict()
+    return {
+        "content_id": d["id"],
+        "blocking": item.blocking,
+        "order": order,
+        "completed": completed,
+        "accessible": accessible,
+        **{k: v for k, v in d.items() if k != "id"},
+    }
+
+
+@router.get("/{class_id}/content", response_model=List[ClassContentDetailOut])
 async def list_class_content(class_id: str, current_user: CurrentUser):
-    """Return content items assigned to this class. Accessible to enrolled students, the teacher, and admins."""
+    """
+    Return ordered content for this class.
+    - Enrolled students: see access/completion state based on their progress.
+    - Unenrolled students: see all items as preview (completed=False, accessible=False).
+    - Managers/tutors/admins: see all items as fully accessible (completed=False).
+    """
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-
-    # Access check
-    if current_user.role == Role.super_admin:
-        pass
-    elif current_user.role == Role.org_admin and str(cls.org.id) == str(current_user.org.id):
-        pass
-    elif current_user.role == Role.teacher and str(cls.teacher.id) == str(current_user.id):
-        pass
-    elif current_user.role == Role.student and current_user in cls.students:
-        pass
-    else:
+    if not _can_see_class(cls, current_user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
 
-    # Reload with select_related so stale DBRefs (deleted content still
-    # referenced by the class) are silently skipped rather than crashing.
     cls.reload()
-    resolved = [c for c in cls.unlocked_content if hasattr(c, "to_dict")]
-    return [ContentOut(**c.to_dict()) for c in resolved]
+
+    is_enrolled_student = (
+        current_user.role == Role.student
+        and any(str(s.id) == str(current_user.id) for s in cls.students if hasattr(s, "id"))
+    )
+    is_unenrolled_student = current_user.role == Role.student and not is_enrolled_student
+
+    completed_ids: set[str] = set()
+    if is_enrolled_student:
+        progress = StudentProgress.objects(student=current_user, class_=cls).first()
+        if progress:
+            completed_ids = progress.completed_ids()
+
+    result = []
+    for i, item in enumerate(cls.content_items):
+        if not hasattr(item.content, "id"):
+            continue  # skip stale refs
+
+        content_id = str(item.content.id)
+
+        if is_unenrolled_student:
+            completed = False
+            accessible = False
+        elif is_enrolled_student:
+            completed = content_id in completed_ids
+            accessible = is_content_accessible(cls.content_items, content_id, completed_ids)
+        else:
+            completed = False
+            accessible = True
+
+        result.append(ClassContentDetailOut(**_build_content_detail(item, i, completed, accessible)))
+
+    return result
 
 
 @router.post("/{class_id}/content", response_model=ClassDetailOut)
@@ -244,7 +298,7 @@ async def add_content_to_class(
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-    if current_user.role not in Role.admin and str(cls.teacher.id) != str(current_user.id):
+    if not _can_manage(cls, current_user):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Only the class teacher or admin can manage content",
@@ -254,16 +308,55 @@ async def add_content_to_class(
     if not content:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
 
-    # Ensure the content is accessible to this org (global or same org)
     if content.scope != ContentScope.global_scope and str(content.org.id) != str(cls.org.id):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Content does not belong to this organization"
         )
 
-    if content in cls.unlocked_content:
+    existing_ids = {
+        str(item.content.id) for item in cls.content_items if hasattr(item.content, "id")
+    }
+    if body.content_id in existing_ids:
         raise HTTPException(status.HTTP_409_CONFLICT, "Content already in class")
 
-    cls.unlocked_content.append(content)
+    cls.content_items.append(ClassContentItem(content=content, blocking=body.blocking))
+    cls.save()
+    return _class_out(cls, detail=True)
+
+
+@router.patch("/{class_id}/content/{content_id}", response_model=ClassDetailOut)
+async def update_content_item(
+    class_id: str,
+    content_id: str,
+    body: UpdateContentItemRequest,
+    current_user: User = Depends(require_roles(*Role.manager)),
+):
+    """Update blocking flag or reorder a content item in the class."""
+    cls = Class.get_by_id(class_id)
+    if not cls:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
+    if not _can_manage(cls, current_user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only the class teacher or admin can manage content",
+        )
+
+    idx = next(
+        (i for i, item in enumerate(cls.content_items)
+         if hasattr(item.content, "id") and str(item.content.id) == content_id),
+        None,
+    )
+    if idx is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not in class")
+
+    if body.blocking is not None:
+        cls.content_items[idx].blocking = body.blocking
+
+    if body.order is not None:
+        new_pos = max(0, min(body.order, len(cls.content_items) - 1))
+        item = cls.content_items.pop(idx)
+        cls.content_items.insert(new_pos, item)
+
     cls.save()
     return _class_out(cls, detail=True)
 
@@ -278,12 +371,112 @@ async def remove_content_from_class(
     cls = Class.get_by_id(class_id)
     if not cls:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
-    if current_user.role not in Role.admin and str(cls.teacher.id) != str(current_user.id):
+    if not _can_manage(cls, current_user):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Only the class teacher or admin can manage content",
         )
 
-    cls.unlocked_content = [c for c in cls.unlocked_content if str(c.id) != content_id]
+    cls.content_items = [
+        item for item in cls.content_items
+        if not (hasattr(item.content, "id") and str(item.content.id) == content_id)
+    ]
     cls.save()
     return _class_out(cls, detail=True)
+
+
+# ── Student progress ──────────────────────────────────────────────────────────
+
+
+@router.post("/{class_id}/content/{content_id}/complete", status_code=status.HTTP_200_OK)
+async def mark_content_complete(class_id: str, content_id: str, current_user: CurrentUser):
+    """Student marks a content item as completed."""
+    if current_user.role != Role.student:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only students can mark content complete")
+
+    cls = Class.get_by_id(class_id)
+    if not cls:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
+
+    if not any(str(s.id) == str(current_user.id) for s in cls.students if hasattr(s, "id")):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not enrolled in this class")
+
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+
+    item_ids = {str(item.content.id) for item in cls.content_items if hasattr(item.content, "id")}
+    if content_id not in item_ids:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not in this class")
+
+    progress = StudentProgress.get_or_create(current_user, cls)
+    if not is_content_accessible(cls.content_items, content_id, progress.completed_ids()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Content is not yet accessible")
+
+    progress.complete(content)
+    return {"message": "Content marked as complete"}
+
+
+@router.delete("/{class_id}/content/{content_id}/complete", status_code=status.HTTP_200_OK)
+async def unmark_content_complete(class_id: str, content_id: str, current_user: CurrentUser):
+    """Student unmarks a content item as completed."""
+    if current_user.role != Role.student:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only students can unmark content")
+
+    cls = Class.get_by_id(class_id)
+    if not cls:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
+
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+
+    progress = StudentProgress.objects(student=current_user, class_=cls).first()
+    if progress:
+        progress.uncomplete(content)
+    return {"message": "Content unmarked"}
+
+
+@router.get("/{class_id}/progress", response_model=ClassProgressOut)
+async def get_class_progress(class_id: str, current_user: CurrentUser):
+    """
+    Return progress for all enrolled students.
+    Accessible to: teacher of the class, org_admin (same org), super_admin, tutor.
+    """
+    cls = Class.get_by_id(class_id)
+    if not cls:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class not found")
+
+    can_view = (
+        current_user.role == Role.super_admin
+        or current_user.role == Role.tutor
+        or (current_user.role == Role.org_admin and str(cls.org.id) == str(current_user.org.id))
+        or (current_user.role == Role.teacher and str(cls.teacher.id) == str(current_user.id))
+    )
+    if not can_view:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
+
+    total_content = len([item for item in cls.content_items if hasattr(item.content, "id")])
+    all_progress = {str(p.student.id): p for p in StudentProgress.get_all_for_class(cls)}
+
+    student_out: list[StudentProgressOut] = []
+    for student in cls.students:
+        if not hasattr(student, "id"):
+            continue
+        sid = str(student.id)
+        progress = all_progress.get(sid)
+        completed_ids = list(progress.completed_ids()) if progress else []
+        student_out.append(StudentProgressOut(
+            student_id=sid,
+            student_name=student.name,
+            student_avatar=student.avatar,
+            completed_count=len(completed_ids),
+            total_count=total_content,
+            completed_content_ids=completed_ids,
+        ))
+
+    return ClassProgressOut(
+        class_id=class_id,
+        total_content=total_content,
+        students=student_out,
+    )

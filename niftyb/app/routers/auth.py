@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.user import (
-    LoginRequest, RegisterOrgRequest, TokenResponse, UserOut,
+    LoginRequest, RegisterOrgRequest, RegisterIndividualRequest, TokenResponse, UserOut,
     ForgotPasswordRequest, ResetPasswordRequest,
 )
 from app.utils.security import (
@@ -103,6 +103,48 @@ async def register_org(body: RegisterOrgRequest):
             {"sub": str(user.id), "role": user.role, "org": str(org.id)}
         )
         logger.info("New org registered", extra={"org_id": str(org.id), "user_id": str(user.id)})
+        return TokenResponse(access_token=token, user=_user_out(user))
+
+
+@router.post("/register-individual", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register_individual(body: RegisterIndividualRequest):
+    with tracer.start_as_current_span("auth.register_individual") as span:
+        span.set_attribute("user.email", body.email)
+
+        if User.get_by_email(body.email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered",
+            )
+
+        academy = Organization.objects(slug="nifty-academy").first()
+        if not academy:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Individual sign-up is not available right now",
+            )
+
+        name = f"{body.first_name} {body.last_name}".strip()
+        avatar = (body.first_name[0] + (body.last_name[0] if body.last_name else "")).upper()
+
+        user = User(
+            name=name,
+            email=body.email,
+            password_hash=hash_password(body.password),
+            role=Role.student,
+            org=academy,
+            avatar=avatar,
+        )
+        user.save()
+
+        verification_token = create_verification_token(str(user.id))
+        verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+        asyncio.create_task(send_welcome_email(user, verification_url))
+
+        token = create_access_token(
+            {"sub": str(user.id), "role": user.role, "org": str(academy.id)}
+        )
+        logger.info("Individual registered", extra={"user_id": str(user.id)})
         return TokenResponse(access_token=token, user=_user_out(user))
 
 
