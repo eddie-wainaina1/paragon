@@ -24,7 +24,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
 import { ContentTypeOptions, ContentFileAccept, Role } from '@/constants';
-import type { ContentType, ContentScope } from '@/types';
+import type { ContentType, ContentScope, ContentCreate } from '@/types';
 
 interface DraftQuestion {
   question: string;
@@ -215,12 +215,12 @@ export default function CreateContent() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const payload: Record<string, unknown> = { title, subject, type, scope, body };
+      const payload: ContentCreate & { passing_score?: number; max_questions?: number } = { title, subject, type, scope, body };
       if (type === 'assessment') {
         payload.passing_score = passingScore;
         if (maxQuestions) payload.max_questions = Number(maxQuestions);
       }
-      const created = await contentApi.create(payload as Parameters<typeof contentApi.create>[0]);
+      const created = await contentApi.create(payload);
       if (file) {
         await contentApi.uploadFile(created.id, file);
       }
