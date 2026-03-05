@@ -18,5 +18,5 @@ export const authApi = {
     apiClient.post<{ message: string }>('/auth/forgot-password', data).then((r) => r.data),
 
   resetPassword: (data: ResetPasswordRequest) =>
-    apiClient.post<{ message: string }>('/auth/reset-password', data).then((r) => r.data),
+    apiClient.post<TokenResponse>('/auth/reset-password', data).then((r) => r.data),
 };

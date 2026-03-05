@@ -190,8 +190,11 @@ async def verify_email(token: str = Query(...)):
         user.save()
         logger.info("Email verified", extra={"user_id": str(user.id)})
 
+        login_token = create_access_token(
+            {"sub": str(user.id), "role": user.role, "org": str(user.org.id)}
+        )
         return RedirectResponse(
-            url=f"{settings.frontend_url}/?verified=true",
+            url=f"{settings.frontend_url}/?verified=true&token={login_token}",
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -210,9 +213,9 @@ async def forgot_password(body: ForgotPasswordRequest):
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 
-@router.post("/reset-password", status_code=status.HTTP_200_OK)
+@router.post("/reset-password", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 async def reset_password(body: ResetPasswordRequest):
-    """Consume a password-reset JWT and update the user's password."""
+    """Consume a password-reset JWT, update the user's password, and return a session token."""
     from jose import JWTError
 
     try:
@@ -239,7 +242,11 @@ async def reset_password(body: ResetPasswordRequest):
     user.password_hash = hash_password(body.new_password)
     user.save()
     logger.info("Password reset", extra={"user_id": str(user.id)})
-    return {"message": "Password updated successfully"}
+
+    token = create_access_token(
+        {"sub": str(user.id), "role": user.role, "org": str(user.org.id)}
+    )
+    return TokenResponse(access_token=token, user=_user_out(user))
 
 
 @router.post("/impersonate/{user_id}", response_model=TokenResponse)

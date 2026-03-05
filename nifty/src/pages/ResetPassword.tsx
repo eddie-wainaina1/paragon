@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, TextField, Button, Alert, CircularProgress, Paper } from '@mui/material';
 import { authApi } from '@/api/auth';
+import { useAuthStore } from '@/store/authStore';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token') ?? '';
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -23,9 +25,10 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      await authApi.resetPassword({ token, new_password: password });
+      const res = await authApi.resetPassword({ token, new_password: password });
+      setAuth(res.user, res.access_token);
       setSuccess(true);
-      setTimeout(() => navigate('/'), 2500);
+      setTimeout(() => navigate('/app/dashboard'), 1500);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -65,7 +68,7 @@ export default function ResetPassword() {
 
         {success ? (
           <Alert severity="success" sx={{ borderRadius: 2 }}>
-            Password updated! Redirecting to login…
+            Password updated! Taking you to your dashboard…
           </Alert>
         ) : (
           <Box component="form" onSubmit={handleSubmit}>

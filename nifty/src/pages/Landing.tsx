@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Box, Typography, Button, Chip, keyframes } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '@/components/Auth/AuthModal';
 import { useAuthStore } from '@/store/authStore';
+import type { User } from '@/types';
 
 const floatAnim = keyframes`
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -16,7 +18,34 @@ export default function Landing() {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<'login' | 'register' | 'individual'>('login');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    const token = searchParams.get('token');
+
+    if (verified === 'true' && token) {
+      const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
+      axios
+        .get<User>(`${BASE_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => {
+          setAuth(res.data, token);
+          navigate('/app/dashboard', { replace: true });
+        })
+        .catch(() => {
+          // Token invalid/expired — fall back to sign-in modal
+          setInitialTab('login');
+          setModalOpen(true);
+        });
+    } else if (verified || searchParams.get('login')) {
+      setInitialTab('login');
+      setModalOpen(true);
+    }
+  }, []);
 
   const openLogin = () => {
     setInitialTab('login');
