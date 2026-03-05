@@ -1,12 +1,14 @@
 import {
   Dialog,
   DialogContent,
+  DialogActions,
   Box,
   Typography,
   Chip,
   IconButton,
   Divider,
   CircularProgress,
+  Button,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import Hls from 'hls.js';
@@ -35,9 +37,23 @@ const THUMB_GRADIENTS: Record<string, string> = {
 interface Props {
   contentId: string | null;
   onClose: () => void;
+  // Optional mark-done context (ClassDetail student view only)
+  canMarkDone?: boolean;
+  completed?: boolean;
+  onMarkComplete?: () => void;
+  onUnmark?: () => void;
+  markPending?: boolean;
 }
 
-export default function ContentViewDialog({ contentId, onClose }: Props) {
+export default function ContentViewDialog({
+  contentId,
+  onClose,
+  canMarkDone,
+  completed,
+  onMarkComplete,
+  onUnmark,
+  markPending,
+}: Props) {
   const open = !!contentId;
 
   // GET /content/{id} increments the view counter on the backend
@@ -316,6 +332,32 @@ export default function ContentViewDialog({ contentId, onClose }: Props) {
           ) : null}
         </Box>
       </DialogContent>
+
+      {canMarkDone && (
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 0 }}>
+          {completed ? (
+            <Button
+              variant="outlined"
+              color="inherit"
+              sx={{ borderRadius: 50 }}
+              onClick={onUnmark}
+              disabled={markPending}
+            >
+              ✅ Mark as Not Done
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="success"
+              sx={{ borderRadius: 50 }}
+              onClick={onMarkComplete}
+              disabled={markPending}
+            >
+              Mark as Done ✓
+            </Button>
+          )}
+        </DialogActions>
+      )}
     </Dialog>
   );
 }

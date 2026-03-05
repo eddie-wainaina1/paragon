@@ -271,7 +271,13 @@ export default function ClassDetail() {
                   <TableRow
                     key={c.content_id}
                     hover={c.accessible || canManage}
-                    sx={{ opacity: isStudent && !c.accessible ? 0.55 : 1 }}
+                    sx={{
+                      opacity: isStudent && !c.accessible ? 0.55 : 1,
+                      cursor: c.accessible || canManage ? 'pointer' : 'default',
+                    }}
+                    onClick={() => {
+                      if (c.accessible || canManage) setViewContent(c);
+                    }}
                   >
                     <TableCell>
                       <Typography variant="body2" color="text.secondary" fontWeight={700}>
@@ -337,7 +343,7 @@ export default function ClassDetail() {
                       </TableCell>
                     )}
 
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
                         {/* View button — only for accessible content or managers */}
                         {(canManage || (isStudent && isEnrolled && c.accessible)) && (
@@ -575,6 +581,17 @@ export default function ClassDetail() {
         <ContentViewDialog
           contentId={viewContent.content_id}
           onClose={() => setViewContent(null)}
+          canMarkDone={isStudent && isEnrolled && viewContent.accessible}
+          completed={viewContent.completed}
+          onMarkComplete={() => {
+            markCompleteMutation.mutate(viewContent.content_id);
+            setViewContent({ ...viewContent, completed: true });
+          }}
+          onUnmark={() => {
+            unmarkCompleteMutation.mutate(viewContent.content_id);
+            setViewContent({ ...viewContent, completed: false });
+          }}
+          markPending={markCompleteMutation.isPending || unmarkCompleteMutation.isPending}
         />
       )}
     </Box>

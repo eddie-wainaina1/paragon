@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Button, Chip, Skeleton } from '@mui/material';
+import { Box, Typography, Grid, Card, CardActionArea, CardContent, Button, Chip, Skeleton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -49,26 +49,28 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
   );
 }
 
-function ClassCard({ cls, action }: { cls: import('@/types').Class; action?: React.ReactNode }) {
+function ClassCard({ cls, action, onClick }: { cls: import('@/types').Class; action?: React.ReactNode; onClick?: () => void }) {
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent sx={{ flex: 1, pb: '12px !important' }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
-          <Typography fontWeight={700} fontSize="0.95rem" lineHeight={1.3}>
-            {cls.name}
+      <CardActionArea onClick={onClick} sx={{ flex: 1, alignItems: 'flex-start' }}>
+        <CardContent sx={{ pb: '12px !important' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+            <Typography fontWeight={700} fontSize="0.95rem" lineHeight={1.3}>
+              {cls.name}
+            </Typography>
+            {cls.grade && (
+              <Chip label={cls.grade} size="small" sx={{ fontSize: '0.72rem', fontWeight: 700, ml: 1, flexShrink: 0 }} />
+            )}
+          </Box>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+            {cls.teacher_name ?? 'Unknown teacher'}
           </Typography>
-          {cls.grade && (
-            <Chip label={cls.grade} size="small" sx={{ fontSize: '0.72rem', fontWeight: 700, ml: 1, flexShrink: 0 }} />
-          )}
-        </Box>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
-          {cls.teacher_name ?? 'Unknown teacher'}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {cls.content_count} lesson{cls.content_count !== 1 ? 's' : ''} · {cls.student_count} student{cls.student_count !== 1 ? 's' : ''}
-        </Typography>
-        {action && <Box sx={{ mt: 1.5 }}>{action}</Box>}
-      </CardContent>
+          <Typography variant="caption" color="text.secondary">
+            {cls.content_count} lesson{cls.content_count !== 1 ? 's' : ''} · {cls.student_count} student{cls.student_count !== 1 ? 's' : ''}
+          </Typography>
+          {action && <Box sx={{ mt: 1.5 }} onClick={(e) => e.stopPropagation()}>{action}</Box>}
+        </CardContent>
+      </CardActionArea>
     </Card>
   );
 }
@@ -198,7 +200,7 @@ export default function Dashboard() {
               )
               : enrolledClasses.slice(0, 3).map((c) => (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
-                  <ClassCard cls={c} />
+                  <ClassCard cls={c} onClick={() => navigate(`/app/classes/${c.id}`)} />
                 </Grid>
               ))}
         </Grid>
@@ -229,6 +231,7 @@ export default function Dashboard() {
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
                   <ClassCard
                     cls={c}
+                    onClick={() => navigate(`/app/classes/${c.id}`)}
                     action={
                       <Button
                         size="small"

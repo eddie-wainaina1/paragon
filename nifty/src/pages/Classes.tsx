@@ -218,7 +218,12 @@ export default function Classes() {
               classes.map((c) => {
                 const enrolled = enrolledIds.has(c.id) || (c.students ?? []).includes(user?.id ?? '');
                 return (
-                  <TableRow key={c.id}>
+                  <TableRow
+                    key={c.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/app/classes/${c.id}`)}
+                  >
                     <TableCell>
                       <Typography fontWeight={700}>{c.name}</Typography>
                     </TableCell>
@@ -258,7 +263,7 @@ export default function Classes() {
                     </TableCell>
                     <TableCell>👤 {c.student_count}</TableCell>
                     <TableCell>📚 {c.content_count}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
                           size="small"
@@ -361,7 +366,12 @@ export default function Classes() {
                   </TableRow>
                 ) : (
                   availableClasses.map((c) => (
-                    <TableRow key={c.id}>
+                    <TableRow
+                      key={c.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/app/classes/${c.id}`)}
+                    >
                       <TableCell>
                         <Typography fontWeight={700}>{c.name}</Typography>
                       </TableCell>
@@ -400,7 +410,7 @@ export default function Classes() {
                         />
                       </TableCell>
                       <TableCell>👤 {c.student_count}</TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="small"
                           color="secondary"
