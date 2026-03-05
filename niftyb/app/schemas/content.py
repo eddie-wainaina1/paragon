@@ -1,7 +1,30 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from app.constants import ContentType, ContentScope
+
+
+class AssessmentQuestionIn(BaseModel):
+    question: str = Field(..., min_length=1, max_length=1000)
+    choices: List[str] = Field(..., min_length=2, max_length=6)
+    answer: int = Field(..., ge=0)  # 0-based index into choices
+
+
+class AssessmentQuestionOut(BaseModel):
+    qid: str
+    question: str
+    choices: List[str]
+    answer: int  # only returned to creator/admin
+
+
+class AssessmentQuestionForStudent(BaseModel):
+    qid: str
+    question: str
+    choices: List[str]  # no answer field
+
+
+class AddQuestionsRequest(BaseModel):
+    questions: List[AssessmentQuestionIn]
 
 
 class ContentCreate(BaseModel):
@@ -11,6 +34,8 @@ class ContentCreate(BaseModel):
     subject: Optional[str] = Field(None, max_length=200)
     body: Optional[str] = None
     emoji: Optional[str] = Field(None, max_length=10)
+    max_questions: Optional[int] = Field(None, ge=1)
+    passing_score: Optional[float] = Field(None, ge=0, le=100)
 
 
 class ContentUpdate(BaseModel):
@@ -21,6 +46,8 @@ class ContentUpdate(BaseModel):
     body: Optional[str] = None
     locked: Optional[bool] = None
     emoji: Optional[str] = Field(None, max_length=10)
+    max_questions: Optional[int] = Field(None, ge=1)
+    passing_score: Optional[float] = Field(None, ge=0, le=100)
 
 
 class ContentOut(BaseModel):
@@ -41,6 +68,9 @@ class ContentOut(BaseModel):
     views: int
     locked: bool
     emoji: str
+    questions_count: int = 0
+    max_questions: Optional[int] = None
+    passing_score: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 

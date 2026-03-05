@@ -5,7 +5,7 @@ from typing import Optional
 
 from mongoengine import (
     Q, Document, EmbeddedDocument, StringField, ReferenceField, ListField,
-    DateTimeField, EmbeddedDocumentListField, BooleanField,
+    DateTimeField, EmbeddedDocumentListField, BooleanField, IntField,
 )
 from app.models.organization import Organization
 from app.models.user import User
@@ -17,6 +17,10 @@ class ClassContentItem(EmbeddedDocument):
     """An ordered content entry within a class, with an optional blocking flag."""
     content = ReferenceField(Content, required=True)
     blocking = BooleanField(default=False)
+    # Assessment attempt limit settings (only meaningful when content.type == "assessment")
+    max_attempts = IntField(min_value=1)              # null = unlimited
+    attempt_interval_value = IntField(min_value=1)    # e.g. 2
+    attempt_interval_unit = StringField(choices=["minutes", "hours", "days", "weeks"])
 
 
 class Class(Document):

@@ -44,11 +44,11 @@ export default function Organizations() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      orgsApi.create({
-        name: orgName,
-        ...(adminEmail ? { admin_email: adminEmail } : {}),
-      }),
+    mutationFn: () => {
+      const payload: { name: string; admin_email?: string } = { name: orgName };
+      if (adminEmail) payload.admin_email = adminEmail;
+      return orgsApi.create(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });

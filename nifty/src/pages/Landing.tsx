@@ -12,6 +12,14 @@ const floatAnim = keyframes`
 `;
 
 const FLOATING_ICONS = ['💻', '🤖', '🔬', '🎮', '⚡', '🌐'];
+const FLOATING_POSITIONS: Array<{ top?: string; bottom?: string; left?: string; right?: string }> = [
+  { top: '8%', left: '6%' },
+  { top: '15%', right: '8%' },
+  { bottom: '20%', left: '10%' },
+  { bottom: '10%', right: '12%' },
+  { top: '50%', left: '3%' },
+  { top: '40%', right: '4%' },
+];
 const ROLES = ['🏫 Organizations', '👩‍🏫 Teachers', '🎓 Students', '⭐ Tutors'];
 
 export default function Landing() {
@@ -105,14 +113,10 @@ export default function Landing() {
             opacity: 0.13,
             animation: `${floatAnim} 6s ease-in-out infinite`,
             animationDelay: `${i * 0.8}s`,
-            ...[
-              { top: '8%', left: '6%' },
-              { top: '15%', right: '8%' },
-              { bottom: '20%', left: '10%' },
-              { bottom: '10%', right: '12%' },
-              { top: '50%', left: '3%' },
-              { top: '40%', right: '4%' },
-            ][i],
+            top: FLOATING_POSITIONS[i].top,
+            bottom: FLOATING_POSITIONS[i].bottom,
+            left: FLOATING_POSITIONS[i].left,
+            right: FLOATING_POSITIONS[i].right,
             pointerEvents: 'none',
           }}
         >

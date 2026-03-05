@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Class, ClassCreate, ClassContentDetail, ClassProgressOut } from '@/types';
+import type { Class, ClassCreate, ClassContentDetail, ClassProgressOut, AssessmentAttemptStart, AssessmentAttemptResult } from '@/types';
 
 export const classesApi = {
   list: () => apiClient.get<Class[]>('/classes').then((r) => r.data),
@@ -43,7 +43,13 @@ export const classesApi = {
   updateContentItem: (
     classId: string,
     contentId: string,
-    data: { blocking?: boolean; order?: number },
+    data: {
+      blocking?: boolean;
+      order?: number;
+      max_attempts?: number | null;
+      attempt_interval_value?: number | null;
+      attempt_interval_unit?: string | null;
+    },
   ) =>
     apiClient
       .patch<Class>(`/classes/${classId}/content/${contentId}`, data)
@@ -66,4 +72,25 @@ export const classesApi = {
 
   getProgress: (classId: string) =>
     apiClient.get<ClassProgressOut>(`/classes/${classId}/progress`).then((r) => r.data),
+
+  startAssessment: (classId: string, contentId: string) =>
+    apiClient
+      .post<AssessmentAttemptStart>(`/classes/${classId}/content/${contentId}/assessment/start`)
+      .then((r) => r.data),
+
+  submitAssessment: (
+    classId: string,
+    contentId: string,
+    attemptId: string,
+    answers: Record<string, number>,
+  ) =>
+    apiClient
+      .post<AssessmentAttemptResult>(`/classes/${classId}/content/${contentId}/assessment/submit`, {
+        attempt_id: attemptId,
+        answers,
+      })
+      .then((r) => r.data),
+
+  resetAssessmentAttempts: (classId: string, contentId: string, studentId: string) =>
+    apiClient.delete(`/classes/${classId}/content/${contentId}/assessment/attempts/${studentId}`),
 };

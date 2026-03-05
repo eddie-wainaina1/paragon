@@ -11,7 +11,8 @@ from jose import JWTError
 
 from app.models.content import Content
 from app.models.user import User
-from app.schemas.content import ContentCreate, ContentUpdate, ContentOut
+from app.schemas.content import ContentCreate, ContentUpdate, ContentOut, AddQuestionsRequest, AssessmentQuestionOut
+from app.models.content import AssessmentQuestion
 from app.utils.deps import CurrentUser, StreamUser, require_roles
 from app.utils.security import create_file_access_token, decode_token
 from app.db import gridfs_put, gridfs_get, gridfs_delete
@@ -49,7 +50,7 @@ def _can_access(content: Content, user: User) -> bool:
 
 
 def _content_out(c: Content) -> ContentOut:
-    return ContentOut(**c.to_dict())
+    return ContentOut.model_validate(c.to_dict())
 
 
 @router.get("", response_model=List[ContentOut])
@@ -101,6 +102,8 @@ async def create_content(
             subject=body.subject,
             body=body.body,
             emoji=body.emoji,
+            max_questions=body.max_questions if body.type == "assessment" else None,
+            passing_score=body.passing_score if body.type == "assessment" else None,
         )
         content.save()
         await cache_delete_pattern("content:list:*")
@@ -180,6 +183,10 @@ async def update_content(content_id: str, body: ContentUpdate, current_user: Cur
         content.locked = body.locked
     if body.emoji is not None:
         content.emoji = body.emoji
+    if body.max_questions is not None:
+        content.max_questions = body.max_questions
+    if body.passing_score is not None:
+        content.passing_score = body.passing_score
 
     content.updated_at = datetime.now(timezone.utc)
     content.save()
@@ -317,6 +324,74 @@ async def get_hls_file(
     data = grid_out.read()
     media_type = "application/x-mpegURL" if filename.endswith(".m3u8") else "video/mp2t"
     return Response(content=data, media_type=media_type)
+
+
+@router.post("/{content_id}/questions", response_model=ContentOut)
+async def add_questions(content_id: str, body: AddQuestionsRequest, current_user: CurrentUser):
+    """Append questions to an assessment content item."""
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if content.type != "assessment":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Content is not an assessment")
+    if str(content.author.id) != str(current_user.id) and current_user.role not in Role.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+
+    for q in body.questions:
+        if q.answer < 0 or q.answer >= len(q.choices):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"Answer index {q.answer} is out of range for question '{q.question[:40]}…'",
+            )
+        content.questions.append(
+            AssessmentQuestion(question=q.question, choices=q.choices, answer=q.answer)
+        )
+
+    content.updated_at = datetime.now(timezone.utc)
+    content.save()
+    await cache_delete(f"content:{content_id}")
+    await cache_delete_pattern("content:list:*")
+    return _content_out(content)
+
+
+@router.delete("/{content_id}/questions/{qid}", response_model=ContentOut)
+async def delete_question(content_id: str, qid: str, current_user: CurrentUser):
+    """Delete a single question from an assessment by its qid."""
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if content.type != "assessment":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Content is not an assessment")
+    if str(content.author.id) != str(current_user.id) and current_user.role not in Role.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+
+    original_len = len(content.questions)
+    content.questions = [q for q in content.questions if q.qid != qid]
+    if len(content.questions) == original_len:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Question not found")
+
+    content.updated_at = datetime.now(timezone.utc)
+    content.save()
+    await cache_delete(f"content:{content_id}")
+    await cache_delete_pattern("content:list:*")
+    return _content_out(content)
+
+
+@router.get("/{content_id}/questions", response_model=List[AssessmentQuestionOut])
+async def get_questions(content_id: str, current_user: CurrentUser):
+    """Return the full question bank (with answers) for an assessment. Creator/admin only."""
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if content.type != "assessment":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Content is not an assessment")
+    if str(content.author.id) != str(current_user.id) and current_user.role not in Role.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+
+    return [
+        AssessmentQuestionOut(qid=q.qid, question=q.question, choices=q.choices, answer=q.answer)
+        for q in content.questions
+    ]
 
 
 @router.get("/{content_id}/file-token")

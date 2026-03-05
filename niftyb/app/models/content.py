@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from mongoengine import Q, Document, StringField, ReferenceField, ObjectIdField, IntField, BooleanField, DateTimeField, DictField
+from mongoengine import (
+    Q, Document, EmbeddedDocument, StringField, ReferenceField, ObjectIdField,
+    IntField, BooleanField, DateTimeField, DictField, FloatField,
+    EmbeddedDocumentListField, ListField,
+)
 from app.models.organization import Organization
 from app.models.user import User
 from app.constants import ContentType, ContentScope, ContentEmoji, Role
+
+
+class AssessmentQuestion(EmbeddedDocument):
+    """A single question in an assessment content item."""
+    qid = StringField(default=lambda: str(uuid.uuid4()), required=True)
+    question = StringField(required=True, max_length=1000)
+    choices = ListField(StringField(max_length=500))  # 2–6 items
+    answer = IntField(required=True)                  # 0-based index into choices
 
 
 class Content(Document):
@@ -30,6 +43,10 @@ class Content(Document):
     views = IntField(default=0, min_value=0)
     locked = BooleanField(default=False)
     emoji = StringField(max_length=10)
+    # Assessment-specific fields
+    questions = EmbeddedDocumentListField(AssessmentQuestion)
+    max_questions = IntField(min_value=1)      # max questions drawn per attempt
+    passing_score = FloatField(min_value=0, max_value=100, default=70)
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     updated_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
 
@@ -76,6 +93,9 @@ class Content(Document):
             "locked": self.locked,
             "emoji": self.emoji
             or ContentEmoji.to_dict().get(self.type, ContentEmoji.text),
+            "questions_count": len(self.questions) if self.questions else 0,
+            "max_questions": self.max_questions,
+            "passing_score": self.passing_score,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

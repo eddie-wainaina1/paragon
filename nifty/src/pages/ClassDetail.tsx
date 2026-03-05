@@ -27,6 +27,7 @@ import {
   LinearProgress,
   Tooltip,
   Avatar,
+  TextField,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { classesApi } from '@/api/classes';
@@ -35,6 +36,96 @@ import { useAuthStore } from '@/store/authStore';
 import { ContentEmoji, Role } from '@/constants';
 import ContentViewDialog from '@/components/Content/ContentViewDialog';
 import type { ClassContentDetail, Content } from '@/types';
+
+// ── Attempt settings dialog (manager only) ────────────────────────────────────
+
+interface AttemptSettingsDialogProps {
+  open: boolean;
+  contentId: string;
+  classId: string;
+  initial: { max_attempts?: number | null; attempt_interval_value?: number | null; attempt_interval_unit?: string | null };
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function AttemptSettingsDialog({
+  open,
+  contentId,
+  classId,
+  initial,
+  onClose,
+  onSaved,
+}: AttemptSettingsDialogProps) {
+  const [maxAttempts, setMaxAttempts] = useState(String(initial.max_attempts ?? ''));
+  const [intervalValue, setIntervalValue] = useState(String(initial.attempt_interval_value ?? ''));
+  const [intervalUnit, setIntervalUnit] = useState(initial.attempt_interval_unit ?? 'hours');
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      classesApi.updateContentItem(classId, contentId, {
+        max_attempts: maxAttempts ? Number(maxAttempts) : null,
+        attempt_interval_value: intervalValue ? Number(intervalValue) : null,
+        attempt_interval_unit: intervalValue ? intervalUnit : null,
+      }),
+    onSuccess: () => { onSaved(); onClose(); },
+  });
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Assessment Attempt Settings</DialogTitle>
+      <DialogContent sx={{ pt: '16px !important', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Max Attempts"
+          type="number"
+          size="small"
+          value={maxAttempts}
+          onChange={(e) => setMaxAttempts(e.target.value)}
+          placeholder="Unlimited"
+          inputProps={{ min: 1 }}
+          helperText="Leave blank for unlimited attempts"
+        />
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <TextField
+            label="Interval"
+            type="number"
+            size="small"
+            value={intervalValue}
+            onChange={(e) => setIntervalValue(e.target.value)}
+            placeholder="None"
+            inputProps={{ min: 1 }}
+            sx={{ flex: 1 }}
+            helperText="Between retakes"
+          />
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <InputLabel>Unit</InputLabel>
+            <Select
+              value={intervalUnit}
+              label="Unit"
+              onChange={(e) => setIntervalUnit(e.target.value)}
+            >
+              <MenuItem value="minutes">Minutes</MenuItem>
+              <MenuItem value="hours">Hours</MenuItem>
+              <MenuItem value="days">Days</MenuItem>
+              <MenuItem value="weeks">Weeks</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          onClick={() => saveMutation.mutate()}
+          disabled={saveMutation.isPending}
+        >
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ClassDetail() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +146,7 @@ export default function ClassDetail() {
   const [addBlocking, setAddBlocking] = useState(false);
   const [error, setError] = useState('');
   const [viewContent, setViewContent] = useState<ClassContentDetail | null>(null);
+  const [attemptSettingsFor, setAttemptSettingsFor] = useState<ClassContentDetail | null>(null);
 
   const { data: cls, isLoading: clsLoading } = useQuery({
     queryKey: ['classes', id],
@@ -136,11 +228,57 @@ export default function ClassDetail() {
     },
   });
 
+  const resetAssessmentAttemptsMutation = useMutation({
+    mutationFn: ({ contentId, studentId }: { contentId: string; studentId: string }) =>
+      classesApi.resetAssessmentAttempts(id!, contentId, studentId),
+    onSuccess: () => {
+      invalidateContent();
+      queryClient.invalidateQueries({ queryKey: ['classes', id, 'progress'] });
+    },
+  });
+
   // Content already in the class (to exclude from picker)
   const classContentIds = new Set(classContent.map((c: ClassContentDetail) => c.content_id));
   const availableToAdd = allContent.filter((c: Content) => !classContentIds.has(c.id));
 
   const isEnrolled = isStudent && (cls?.students ?? []).includes(user?.id ?? '');
+
+  // Whether the org is "Nifty Academy" (no reset allowed)
+  const isNiftyAcademy = cls?.org_name?.toLowerCase() === 'nifty academy';
+
+  // Whether there are any test items in the class
+  const hasAssessmentItems = classContent.some((c: ClassContentDetail) => c.type === 'assessment');
+
+  // Auto-open next content after mark complete
+  const handleMarkComplete = (currentContentId: string) => {
+    markCompleteMutation.mutate(currentContentId, {
+      onSuccess: () => {
+        invalidateContent();
+        const idx = classContent.findIndex(
+          (x: ClassContentDetail) => x.content_id === currentContentId
+        );
+        const next: ClassContentDetail | undefined = classContent[idx + 1];
+        if (next) {
+          setViewContent(Object.assign({}, next, { accessible: true, completed: false }));
+        } else {
+          setViewContent(null);
+        }
+      },
+    });
+  };
+
+  // Called from ContentViewDialog when test is passed (auto-mark complete handled server-side)
+  const handleAssessmentPassed = () => {
+    invalidateContent();
+    if (!viewContent) return;
+    const idx = classContent.findIndex(
+      (x: ClassContentDetail) => x.content_id === viewContent.content_id
+    );
+    const next: ClassContentDetail | undefined = classContent[idx + 1];
+    if (next) {
+      setViewContent(Object.assign({}, next, { accessible: true, completed: false }));
+    }
+  };
 
   if (clsLoading) {
     return (
@@ -266,6 +404,7 @@ export default function ClassDetail() {
               classContent.map((c: ClassContentDetail, idx: number) => {
                 const isFirst = idx === 0;
                 const isLast = idx === classContent.length - 1;
+                const isAssessmentItem = c.type === 'assessment';
 
                 return (
                   <TableRow
@@ -333,13 +472,25 @@ export default function ClassDetail() {
 
                     {isStudent && (
                       <TableCell>
-                        {c.completed ? (
-                          <Chip label="Done" size="small" color="success" sx={{ fontWeight: 700 }} />
-                        ) : c.accessible ? (
-                          <Chip label="In progress" size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
-                        ) : (
-                          <Chip label="Locked" size="small" variant="outlined" sx={{ fontWeight: 700, color: 'text.disabled' }} />
-                        )}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          {c.completed ? (
+                            <Chip label="Done" size="small" color="success" sx={{ fontWeight: 700 }} />
+                          ) : c.accessible ? (
+                            <Chip label="In progress" size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
+                          ) : (
+                            <Chip label="Locked" size="small" variant="outlined" sx={{ fontWeight: 700, color: 'text.disabled' }} />
+                          )}
+                          {isAssessmentItem && c.best_score != null && (
+                            <Typography variant="caption" color="text.secondary">
+                              Best: {c.best_score.toFixed(0)}%
+                            </Typography>
+                          )}
+                          {isAssessmentItem && (c.attempts_count ?? 0) > 0 && (
+                            <Typography variant="caption" color="text.secondary">
+                              {c.attempts_count} attempt{c.attempts_count !== 1 ? 's' : ''}
+                            </Typography>
+                          )}
+                        </Box>
                       </TableCell>
                     )}
 
@@ -357,20 +508,32 @@ export default function ClassDetail() {
                           </Button>
                         )}
 
-                        {/* Student: mark complete / unmark */}
-                        {isStudent && isEnrolled && c.accessible && !c.completed && (
+                        {/* Test attempt settings (managers only) */}
+                        {canManage && isAssessmentItem && (
+                          <Button
+                            size="small"
+                            variant="text"
+                            sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                            onClick={() => setAttemptSettingsFor(c)}
+                          >
+                            Attempts
+                          </Button>
+                        )}
+
+                        {/* Student: mark complete / unmark — NOT for tests */}
+                        {isStudent && isEnrolled && c.accessible && !c.completed && !isAssessmentItem && (
                           <Button
                             size="small"
                             variant="contained"
                             color="success"
                             sx={{ borderRadius: 50, fontSize: '0.78rem' }}
-                            onClick={() => markCompleteMutation.mutate(c.content_id)}
+                            onClick={() => handleMarkComplete(c.content_id)}
                             disabled={markCompleteMutation.isPending}
                           >
                             Mark Done
                           </Button>
                         )}
-                        {isStudent && isEnrolled && c.completed && (
+                        {isStudent && isEnrolled && c.completed && !isAssessmentItem && (
                           <Button
                             size="small"
                             variant="outlined"
@@ -383,7 +546,7 @@ export default function ClassDetail() {
                           </Button>
                         )}
 
-                        {/* Manager: reorder */}
+                        {/* Manager: reorder + remove */}
                         {canManage && (
                           <>
                             <Button
@@ -488,16 +651,44 @@ export default function ClassDetail() {
                         </TableCell>
                         {canManage && (
                           <TableCell>
-                            <Button
-                              size="small"
-                              color="error"
-                              variant="outlined"
-                              sx={{ borderRadius: 50, fontSize: '0.78rem' }}
-                              onClick={() => removeStudentMutation.mutate(s.student_id)}
-                              disabled={removeStudentMutation.isPending}
-                            >
-                              Remove
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                                onClick={() => removeStudentMutation.mutate(s.student_id)}
+                                disabled={removeStudentMutation.isPending}
+                              >
+                                Remove
+                              </Button>
+                              {hasAssessmentItems && !isNiftyAcademy && (
+                                <Tooltip title="Reset all assessment attempts for this student">
+                                  <span>
+                                    <Button
+                                      size="small"
+                                      color="warning"
+                                      variant="outlined"
+                                      sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                                      onClick={() => {
+                                        const assessmentItems = classContent.filter(
+                                          (c: ClassContentDetail) => c.type === 'assessment'
+                                        );
+                                        assessmentItems.forEach((c: ClassContentDetail) => {
+                                          resetAssessmentAttemptsMutation.mutate({
+                                            contentId: c.content_id,
+                                            studentId: s.student_id,
+                                          });
+                                        });
+                                      }}
+                                      disabled={resetAssessmentAttemptsMutation.isPending}
+                                    >
+                                      Reset Assessments
+                                    </Button>
+                                  </span>
+                                </Tooltip>
+                              )}
+                            </Box>
                           </TableCell>
                         )}
                       </TableRow>
@@ -576,22 +767,47 @@ export default function ClassDetail() {
         </DialogActions>
       </Dialog>
 
+      {/* Test attempt settings dialog */}
+      {attemptSettingsFor && (
+        <AttemptSettingsDialog
+          open={!!attemptSettingsFor}
+          contentId={attemptSettingsFor.content_id}
+          classId={id!}
+          initial={{
+            max_attempts: attemptSettingsFor.max_attempts,
+            attempt_interval_value: attemptSettingsFor.attempt_interval_value,
+            attempt_interval_unit: attemptSettingsFor.attempt_interval_unit,
+          }}
+          onClose={() => setAttemptSettingsFor(null)}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ['classes', id] });
+            invalidateContent();
+          }}
+        />
+      )}
+
       {/* Content viewer */}
       {viewContent && (
         <ContentViewDialog
           contentId={viewContent.content_id}
+          classId={id}
           onClose={() => setViewContent(null)}
           canMarkDone={isStudent && isEnrolled && viewContent.accessible}
           completed={viewContent.completed}
-          onMarkComplete={() => {
-            markCompleteMutation.mutate(viewContent.content_id);
-            setViewContent({ ...viewContent, completed: true });
-          }}
+          onMarkComplete={
+            viewContent.type === 'assessment'
+              ? handleAssessmentPassed
+              : () => handleMarkComplete(viewContent.content_id)
+          }
           onUnmark={() => {
             unmarkCompleteMutation.mutate(viewContent.content_id);
-            setViewContent({ ...viewContent, completed: false });
+            setViewContent(Object.assign({}, viewContent, { completed: false }));
           }}
           markPending={markCompleteMutation.isPending || unmarkCompleteMutation.isPending}
+          maxAttempts={viewContent.max_attempts}
+          attemptsCount={viewContent.attempts_count}
+          attemptIntervalValue={viewContent.attempt_interval_value}
+          attemptIntervalUnit={viewContent.attempt_interval_unit}
         />
       )}
     </Box>

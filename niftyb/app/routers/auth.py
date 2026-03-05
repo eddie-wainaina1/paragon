@@ -28,8 +28,7 @@ tracer = get_tracer(__name__)
 
 
 def _user_out(user: User) -> UserOut:
-    d = user.to_dict()
-    return UserOut(**d)
+    return UserOut.model_validate(user.to_dict())
 
 
 @router.post("/login", response_model=TokenResponse)

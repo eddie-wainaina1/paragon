@@ -84,9 +84,10 @@ export const ContentEmojiConst = {
     video: "🎬",
     audio: "🎧",
     pdf: "📑",
+    assessment: "📝",
 
     values() {
-        return ["📄", "🎬", "🎧", "📑"];
+        return ["📄", "🎬", "🎧", "📑", "📝"];
     },
 
     to_dict() {
@@ -95,6 +96,7 @@ export const ContentEmojiConst = {
             video: "🎬",
             audio: "🎧",
             pdf: "📑",
+            assessment: "📝",
         };
     },
 };
@@ -107,9 +109,10 @@ export const ContentTypeConst = {
     video: "video" as const,
     audio: "audio" as const,
     pdf: "pdf" as const,
+    assessment: "assessment" as const,
 
     values() {
-        return ["text", "video", "audio", "pdf"];
+        return ["text", "video", "audio", "pdf", "assessment"];
     },
 
     to_dict() {
@@ -118,6 +121,7 @@ export const ContentTypeConst = {
             video: "Video",
             audio: "Audio",
             pdf: "PDF",
+            assessment: "Assessment",
         };
     },
 };
@@ -127,19 +131,21 @@ export const ContentType = ContentTypeConst;
 
 /** Options used in the content-type selector on Create Content. */
 export const ContentTypeOptions = [
-    { value: "text" as const, icon: "📝", label: "Text" },
+    { value: "text" as const, icon: "📄", label: "Text" },
     { value: "video" as const, icon: "🎬", label: "Video" },
     { value: "audio" as const, icon: "🎧", label: "Audio" },
     { value: "pdf" as const, icon: "📑", label: "PDF" },
+    { value: "assessment" as const, icon: "📝", label: "Assessment" },
 ];
 
 /** Chip colours for content type badges. */
 export const ContentTypeStyle = {
     chip: {
-        text: { bg: "#DBEAFE", color: "#1D4ED8" },
+        text:  { bg: "#DBEAFE", color: "#1D4ED8" },
         video: { bg: "#FCE7F3", color: "#BE185D" },
         audio: { bg: "#D1FAE5", color: "#065F46" },
         pdf:   { bg: "#FEF3C7", color: "#92400E" },
+        assessment:  { bg: "#EDE9FE", color: "#5B21B6" },
     },
 };
 
@@ -155,7 +161,7 @@ export const ContentFilters = [
     { value: "all", label: "All", bg: "#F97316", color: "#fff" },
     {
         value: "text",
-        label: "📝 Text",
+        label: "📄 Text",
         bg: ContentTypeStyle.chip.text.bg,
         color: ContentTypeStyle.chip.text.color,
     },
@@ -176,6 +182,12 @@ export const ContentFilters = [
         label: "📑 PDF",
         bg: ContentTypeStyle.chip.pdf.bg,
         color: ContentTypeStyle.chip.pdf.color,
+    },
+    {
+        value: "assessment",
+        label: "📝 Assessment",
+        bg: ContentTypeStyle.chip.assessment.bg,
+        color: ContentTypeStyle.chip.assessment.color,
     },
     { value: "global", label: "🌍 Global", bg: "#FEF3C7", color: "#92400E" },
 ] as const;

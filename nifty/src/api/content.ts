@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Content, ContentCreate, ContentType, ContentScope } from '@/types';
+import type { Content, ContentCreate, ContentType, ContentScope, AssessmentQuestion } from '@/types';
 
 export const contentApi = {
   list: (params?: { type?: ContentType; scope?: ContentScope }) =>
@@ -29,4 +29,13 @@ export const contentApi = {
 
   getFileToken: (id: string) =>
     apiClient.get<{ token: string }>(`/content/${id}/file-token`).then((r) => r.data.token),
+
+  getQuestions: (id: string) =>
+    apiClient.get<AssessmentQuestion[]>(`/content/${id}/questions`).then((r) => r.data),
+
+  addQuestions: (id: string, questions: Omit<AssessmentQuestion, 'qid'>[]) =>
+    apiClient.post<Content>(`/content/${id}/questions`, { questions }).then((r) => r.data),
+
+  deleteQuestion: (id: string, qid: string) =>
+    apiClient.delete(`/content/${id}/questions/${qid}`),
 };

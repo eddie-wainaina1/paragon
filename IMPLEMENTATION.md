@@ -151,7 +151,7 @@ Single source of truth for all domain enumerations shared across models, schemas
 
 - **`Constant`** — Base class with `values()`, `to_dict()`, `pattern()` class methods
 - **`Role`** — All role values + role group lists (`creator`, `admin`, `manager`, `global_scope`, `internal`)
-- **`ContentType`** — `text`, `video`, `audio`, `pdf`
+- **`ContentType`** — `text`, `video`, `audio`, `pdf`, `assessment`
 - **`ContentScope`** — `global`, `org`
 - **`ClassScope`** — `global`, `org`
 - **`ContentEmoji`** — Emoji per content type
@@ -201,7 +201,7 @@ Collection: `content` | Indexes: `org`, `author`, `scope`, `type`
 | Field | Type | Notes |
 |-------|------|-------|
 | `title` | str | |
-| `type` | str | `text`, `video`, `audio`, `pdf` |
+| `type` | str | `text`, `video`, `audio`, `pdf`, `assessment` |
 | `scope` | str | `global` (visible to all) or `org` (visible to own org) |
 | `org` | ref → Organization | |
 | `author` | ref → User | |
@@ -215,7 +215,12 @@ Collection: `content` | Indexes: `org`, `author`, `scope`, `type`
 | `views` | int | View counter |
 | `locked` | bool | Locked content cannot be modified by non-admins |
 | `emoji` | str | Custom emoji override |
+| `questions` | list[AssessmentQuestion] | Question bank (assessment type only) |
+| `max_questions` | int | Max questions randomly drawn per attempt (assessment only) |
+| `passing_score` | float | Pass threshold 0–100, default 70 (assessment only) |
 | `created_at` / `updated_at` | datetime | |
+
+**`AssessmentQuestion` (EmbeddedDocument)**: `qid` (uuid str), `question` (str), `choices` (list[str], 2–6), `answer` (int, 0-based index).
 
 Key methods: `get_by_id`, `list_visible_to(user)`, `increment_views`, `delete_by_org`
 
@@ -234,7 +239,7 @@ Collection: `classes` | Indexes: `org`, `teacher`
 | `content_items` | list[ClassContentItem] | Ordered embedded docs; list index = display order |
 | `created_at` | datetime | |
 
-**`ClassContentItem` (EmbeddedDocument)**: `content: ref → Content`, `blocking: bool` — if True, students cannot access subsequent items until this one is completed.
+**`ClassContentItem` (EmbeddedDocument)**: `content: ref → Content`, `blocking: bool` — if True, students cannot access subsequent items until this one is completed. Assessment-specific attempt limit fields: `max_attempts` (int, null = unlimited), `attempt_interval_value` (int), `attempt_interval_unit` (str: `minutes`/`hours`/`days`/`weeks`).
 
 Key methods: `get_by_id`, `list_for_user(user)`, `list_available_for_student(student)`, `get_enrolled_ids(student)`
 
@@ -250,6 +255,23 @@ Collection: `student_progress` | Indexes: `(student, class_)`
 
 Key methods: `get_or_create(student, class_)`, `complete(content)`, `uncomplete(content)`, `completed_ids()`, `delete_by_class`, `delete_by_student`, `delete_by_student_in_class`, `get_all_for_class`
 
+#### `assessment_attempt.py` — `AssessmentAttempt`
+
+Collection: `assessment_attempts` | Indexes: `(student, content, class_)`, `student`, `content`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `student` | ref → User | |
+| `content` | ref → Content | The assessment content item |
+| `class_` | ref → Class | The class context |
+| `questions_shown` | list[str] | Ordered list of qids drawn for this attempt |
+| `answers` | dict | `{qid: chosen_index}` — student's submitted answers |
+| `score` | float | 0–100; None until submitted |
+| `submitted_at` | datetime | Set when attempt is submitted; None = attempt in progress |
+| `created_at` | datetime | Auto-set UTC |
+
+Key methods: `get_active(student, content, class_)`, `get_or_create_active(student, content, class_, qids)`, `count_submitted`, `best_score`, `last_submitted_at`, `delete_for_student`, `delete_by_class`, `delete_by_student`
+
 ---
 
 ### Schemas (`app/schemas/`)
@@ -258,8 +280,8 @@ Pydantic v2 models for request/response validation. One file per domain:
 
 - `user.py` — `LoginRequest`, `RegisterOrgRequest`, `UserCreate`, `UserUpdate`, `UserOut`, `TokenResponse`, `ForgotPasswordRequest`, `ResetPasswordRequest`
 - `organization.py` — `OrgCreate`, `OrgUpdate`, `OrgOut`
-- `content.py` — `ContentCreate`, `ContentUpdate`, `ContentOut`
-- `class_.py` — `ClassCreate`, `ClassUpdate`, `ClassOut`, `ClassDetailOut` (includes `students` + `content_items`), `ClassContentItemSimple`, `ClassContentDetailOut` (enriched content with blocking/order/completed/accessible), `AddStudentRequest`, `AddContentRequest` (+ `blocking` flag), `UpdateContentItemRequest` (blocking/order), `StudentProgressOut`, `ClassProgressOut`
+- `content.py` — `ContentCreate`, `ContentUpdate`, `ContentOut`; assessment schemas: `AssessmentQuestionIn`, `AssessmentQuestionOut` (includes answer — creator/admin only), `AssessmentQuestionForStudent` (no answer field), `AddQuestionsRequest`
+- `class_.py` — `ClassCreate`, `ClassUpdate`, `ClassOut`, `ClassDetailOut` (includes `students` + `content_items`), `ClassContentItemSimple`, `ClassContentDetailOut` (enriched content with blocking/order/completed/accessible/best_score/attempts_count/max_attempts/attempt_interval_*), `AddStudentRequest`, `AddContentRequest` (+ `blocking` flag), `UpdateContentItemRequest` (blocking/order/attempt settings), `StudentProgressOut`, `ClassProgressOut`; assessment attempt schemas: `AssessmentAttemptStartOut`, `AssessmentSubmitRequest`, `AssessmentAttemptResultOut`
 
 ---
 
@@ -313,11 +335,16 @@ All routers mount under `/api/v1`.
 | GET | `/{id}/file-token` | any | Issue a 30-min file-access JWT scoped to this content item (used by PDF viewer) |
 | GET | `/{id}/file` | any (Bearer or `?token=`) | Stream the raw GridFS file with HTTP Range support |
 
+**Assessment question endpoints:**
+- `POST /{id}/questions` — append questions (creator/admin; content must be type `assessment`)
+- `DELETE /{id}/questions/{qid}` — delete a single question by `qid`
+- `GET /{id}/questions` — list full question bank with answers (creator/admin only)
+
 **MIME rules for uploads:**
 - `video` → `video/*`
 - `audio` → `audio/*`
 - `pdf` → `application/pdf`
-- `text` → no restriction
+- `text` / `assessment` → no file upload
 
 **HLS flow (video + audio):** Upload sets `hls_ready=False`. Background task transcodes and stores segments in GridFS, then sets `hls_ready=True`. Frontend polls `hls_ready` via the content detail query and shows a "processing" spinner until ready. Video and audio are both served exclusively via HLS — the raw file endpoint is not used for playback. File tokens are only issued for PDF.
 
@@ -339,9 +366,20 @@ All routers mount under `/api/v1`.
 | POST | `/{id}/content` | manager (teacher/admin) | Add content item with optional `blocking` flag |
 | PATCH | `/{id}/content/{cid}` | manager (teacher/admin) | Update `blocking` flag or `order` (reposition) |
 | DELETE | `/{id}/content/{cid}` | manager (teacher/admin) | Remove content from class |
-| POST | `/{id}/content/{cid}/complete` | student (enrolled) | Mark content as completed; enforces blocking rules |
+| POST | `/{id}/content/{cid}/complete` | student (enrolled) | Mark content as completed; enforces blocking rules; returns 400 for assessment type (auto-completed on passing) |
 | DELETE | `/{id}/content/{cid}/complete` | student | Unmark completion |
 | GET | `/{id}/progress` | teacher, org_admin, super_admin, tutor | Student progress: names, completion counts, completed IDs |
+| POST | `/{id}/content/{cid}/assessment/start` | student (enrolled) | Start or resume an assessment attempt; validates attempt limit and interval; returns question list (no answers) |
+| POST | `/{id}/content/{cid}/assessment/submit` | student (enrolled) | Submit answers; auto-marks content complete on passing |
+| GET | `/{id}/content/{cid}/assessment/attempts` | student (own) / manager (all) | List attempt records with scores |
+| DELETE | `/{id}/content/{cid}/assessment/attempts/{uid}` | manager | Reset all attempts for a student; forbidden in Nifty Academy |
+
+**Assessment flow:**
+- Creator sets `passing_score` (default 70) and `max_questions` (random draw) on the content item
+- Class manager sets `max_attempts` and `attempt_interval_value/unit` per `ClassContentItem`
+- `start` endpoint: checks attempt limit → checks interval cooldown → reuses active attempt or samples `min(max_questions, pool_size)` questions randomly → returns `AssessmentAttemptStartOut` (questions without answers)
+- `submit` endpoint: scores answers → saves score+submitted_at → if passed, calls `StudentProgress.complete()` → returns score, pass/fail, counts
+- Assessments are auto-completed server-side on pass; the manual `/complete` endpoint rejects assessment type
 
 ---
 
@@ -468,7 +506,7 @@ Frontend mirror of the backend constants. Provides:
 ### Types (`src/types/index.ts`)
 
 TypeScript interfaces for all domain objects:
-`Organization`, `User`, `Content`, `Class`, `TokenResponse`, `LoginRequest`, `RegisterOrgRequest`, `UserCreate`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `ContentCreate`, `ClassCreate`
+`Organization`, `User`, `Content` (includes `questions_count?`, `max_questions?`, `passing_score?`, `questions?`), `Class`, `ClassContentDetail` (extends `Content` + `content_id`, `blocking`, `order`, `completed`, `accessible`, `best_score?`, `attempts_count?`, `max_attempts?`, `attempt_interval_value?`, `attempt_interval_unit?`), `TokenResponse`, `LoginRequest`, `RegisterOrgRequest`, `UserCreate`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `ContentCreate`, `ClassCreate`; assessment types: `AssessmentQuestion`, `AssessmentQuestionForStudent`, `AssessmentAttemptStart`, `AssessmentAttemptResult`
 
 ---
 
@@ -538,6 +576,9 @@ Zustand store for dark/light mode preference, persisted to `localStorage`.
 - `uploadFile(id, file)` → `Content`
 - `getFileToken(id)` → string (30-min file-access JWT; used for PDF streaming)
 - `getFileUrl(id)` → string (URL to `/content/{id}/file` with token query param; kept for direct file access if needed)
+- `getQuestions(id)` → `AssessmentQuestion[]` (full question bank with answers; creator/admin only)
+- `addQuestions(id, questions)` → `Content`
+- `deleteQuestion(id, qid)` → void
 
 #### `classes.ts`
 
@@ -558,6 +599,10 @@ Zustand store for dark/light mode preference, persisted to `localStorage`.
 - `markComplete(classId, contentId)` → `{message}`
 - `unmarkComplete(classId, contentId)` → `{message}`
 - `getProgress(classId)` → `ClassProgressOut`
+- `updateContentItem(classId, contentId, {blocking?, order?, max_attempts?, attempt_interval_value?, attempt_interval_unit?})` → `Class`
+- `startAssessment(classId, contentId)` → `AssessmentAttemptStart`
+- `submitAssessment(classId, contentId, attemptId, answers)` → `AssessmentAttemptResult`
+- `resetAssessmentAttempts(classId, contentId, studentId)` → void
 
 ---
 
@@ -614,6 +659,9 @@ Full-screen MUI `Dialog` for viewing content:
 - `audio` → `HlsAudioPlayer` (when `hls_ready`); "processing" spinner while transcoding
 - `pdf` → `PdfViewer` component (fetches a 30-min file-access token via `/file-token` first)
 - `text` → renders body as plain text
+- `assessment` → assessment state machine: `idle` (metadata + Start button) → `taking` (questions with radio inputs + progress bar + Submit) → `result` (score, pass/fail, Try Again / Close)
+
+Props for assessment context (passed from ClassDetail): `classId?`, `maxAttempts?`, `attemptsCount?`, `attemptIntervalValue?`, `attemptIntervalUnit?`. The `onMarkComplete` callback is called automatically after a passing submission.
 
 File-access tokens are only fetched for PDF. Video and audio both use HLS served via `Authorization: Bearer` header.
 
@@ -652,15 +700,16 @@ Browse all content visible to the current user. Features:
 #### `CreateContent.tsx`
 
 Multi-step form for creating content:
-1. Select type (text/video/audio/pdf)
+1. Select type (text/video/audio/pdf/assessment)
 2. Fill title, subject, scope, body/URL
 3. For file types (video/audio/pdf): upload file via `uploadFile()`
+4. For `assessment`: set `passing_score`, `max_questions`, build question bank inline (question + 2–6 choices + correct answer radio); questions POSTed to `/questions` after content creation
 
 Uses React Query mutations.
 
 #### `MyContent.tsx`
 
-Table view of content created by the current user. Supports inline delete. Links to edit (redirects to create form pre-filled — or a dedicated edit view).
+Table view of content created by the current user. Supports inline delete and inline edit (via `EditDialog`). For `assessment` type, the edit dialog shows the question bank manager: lists existing questions with per-question delete button, and an inline add-question form at the bottom. Also allows editing `passing_score` and `max_questions`.
 
 #### `Classes.tsx`
 
@@ -673,8 +722,11 @@ Lists classes as cards with student count, content count, grade, teacher.
 #### `ClassDetail.tsx`
 
 Detail view for a single class (`/app/classes/:id`):
-- **Content table**: lists `unlocked_content` for the class; managers can add/remove content via a dialog picker
-- **Students table** (managers only): lists enrolled student IDs; managers can remove students
+- **Content table**: lists content for the class with blocking/status indicators; managers can add/remove/reorder content; for `assessment` items managers see an "Attempts" button opening `AttemptSettingsDialog` to set `max_attempts` and attempt interval
+- **Status column** (students): shows Done/In progress/Locked chip; for assessments shows `best_score` and attempt count
+- **Mark Done / Unmark** buttons hidden for assessment type (auto-completed server-side on passing)
+- **Students table** (managers only): lists enrolled students; managers can remove students; "Reset Assessments" button resets all assessment attempts for a student across all assessment items in the class (hidden for Nifty Academy classes)
+- **Auto-next content**: after marking done (`handleMarkComplete`) or passing an assessment (`handleAssessmentPassed`), automatically opens the next content item
 - Self-subscribe/unsubscribe not shown here (handled in Classes list)
 
 #### `Users.tsx`

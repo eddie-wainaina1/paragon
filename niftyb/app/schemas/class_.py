@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 from app.constants import ClassScope
+from app.schemas.content import AssessmentQuestionForStudent
 
 
 class ClassCreate(BaseModel):
@@ -51,6 +52,12 @@ class ClassContentDetailOut(BaseModel):
     order: int
     completed: bool
     accessible: bool
+    # Assessment attempt tracking (students only, populated when content.type == "assessment")
+    best_score: Optional[float] = None
+    attempts_count: int = 0
+    max_attempts: Optional[int] = None
+    attempt_interval_value: Optional[int] = None
+    attempt_interval_unit: Optional[str] = None
     # Content fields
     title: str
     type: str
@@ -68,6 +75,9 @@ class ClassContentDetailOut(BaseModel):
     views: int
     locked: bool
     emoji: Optional[str]
+    questions_count: int = 0
+    max_questions: Optional[int] = None
+    passing_score: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 
@@ -84,6 +94,9 @@ class AddContentRequest(BaseModel):
 class UpdateContentItemRequest(BaseModel):
     blocking: Optional[bool] = None
     order: Optional[int] = None
+    max_attempts: Optional[int] = Field(None, ge=1)
+    attempt_interval_value: Optional[int] = Field(None, ge=1)
+    attempt_interval_unit: Optional[str] = Field(None, pattern="^(minutes|hours|days|weeks)$")
 
 
 class StudentProgressOut(BaseModel):
@@ -99,3 +112,26 @@ class ClassProgressOut(BaseModel):
     class_id: str
     total_content: int
     students: List[StudentProgressOut]
+
+
+# ── Assessment attempt schemas ────────────────────────────────────────────────
+
+class AssessmentAttemptStartOut(BaseModel):
+    attempt_id: str
+    questions: List[AssessmentQuestionForStudent]
+    attempts_used: int
+    max_attempts: Optional[int]
+
+
+class AssessmentSubmitRequest(BaseModel):
+    attempt_id: str
+    answers: Dict[str, int]  # {qid: chosen_index}
+
+
+class AssessmentAttemptResultOut(BaseModel):
+    score: float
+    passed: bool
+    correct: int
+    total: int
+    attempts_used: int
+    attempts_remaining: Optional[int]  # None = unlimited

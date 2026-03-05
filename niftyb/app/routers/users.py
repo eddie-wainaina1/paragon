@@ -37,7 +37,7 @@ def _check_role_org_compat(role: str, org: Organization) -> None:
 
 
 def _user_out(user: User) -> UserOut:
-    return UserOut(**user.to_dict())
+    return UserOut.model_validate(user.to_dict())
 
 
 @router.get("/me", response_model=UserOut)

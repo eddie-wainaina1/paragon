@@ -6,7 +6,7 @@ export type Role =
   | 'teacher'
   | 'student';
 
-export type ContentType = 'text' | 'video' | 'audio' | 'pdf';
+export type ContentType = 'text' | 'video' | 'audio' | 'pdf' | 'assessment';
 export type ContentScope = 'global' | 'org';
 export type OrgType = 'platform' | 'school';
 
@@ -32,6 +32,35 @@ export interface User {
   terms_accepted_at: string | null;
 }
 
+export interface AssessmentQuestion {
+  qid: string;
+  question: string;
+  choices: string[];
+  answer: number;
+}
+
+export interface AssessmentQuestionForStudent {
+  qid: string;
+  question: string;
+  choices: string[];
+}
+
+export interface AssessmentAttemptStart {
+  attempt_id: string;
+  questions: AssessmentQuestionForStudent[];
+  attempts_used: number;
+  max_attempts: number | null;
+}
+
+export interface AssessmentAttemptResult {
+  score: number;
+  passed: boolean;
+  correct: number;
+  total: number;
+  attempts_used: number;
+  attempts_remaining: number | null;
+}
+
 export interface Content {
   id: string;
   title: string;
@@ -50,6 +79,10 @@ export interface Content {
   views: number;
   locked: boolean;
   emoji: string;
+  questions_count?: number;
+  max_questions?: number | null;
+  passing_score?: number | null;
+  questions?: AssessmentQuestion[];
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +101,11 @@ export interface ClassContentDetail extends Content {
   order: number;
   completed: boolean;
   accessible: boolean;
+  best_score?: number | null;
+  attempts_count?: number;
+  max_attempts?: number | null;
+  attempt_interval_value?: number | null;
+  attempt_interval_unit?: string | null;
 }
 
 export interface StudentProgressOut {

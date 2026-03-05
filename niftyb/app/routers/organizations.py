@@ -24,7 +24,7 @@ tracer = get_tracer(__name__)
 
 
 def _org_out(org: Organization) -> OrgOut:
-    return OrgOut(**org.to_dict())
+    return OrgOut.model_validate(org.to_dict())
 
 
 @router.get("", response_model=List[OrgOut])
