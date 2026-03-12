@@ -39,30 +39,45 @@ function QuestionBuilder({
   questions: DraftQuestion[];
   onChange: (qs: DraftQuestion[]) => void;
 }) {
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [q, setQ] = useState('');
   const [choices, setChoices] = useState(['', '']);
   const [answer, setAnswer] = useState(0);
   const [err, setErr] = useState('');
 
-  const addChoice = () => {
-    if (choices.length < 6) setChoices(choices.concat(''));
-  };
-
-  const removeChoice = (i: number) => {
-    if (choices.length <= 2) return;
-    const next = choices.filter((_, idx) => idx !== i);
-    setChoices(next);
-    if (answer >= next.length) setAnswer(next.length - 1);
-  };
-
-  const addQuestion = () => {
-    if (!q.trim()) { setErr('Question text is required'); return; }
-    if (choices.some((c) => !c.trim())) { setErr('All choices must be filled in'); return; }
+  const startEdit = (idx: number) => {
+    const item = questions[idx];
+    setEditingIdx(idx);
+    setQ(item.question);
+    setChoices(item.choices.slice());
+    setAnswer(item.answer);
     setErr('');
-    onChange(questions.concat([{ question: q.trim(), choices: choices.map((c) => c.trim()), answer }]));
+  };
+
+  const cancelEdit = () => {
+    setEditingIdx(null);
     setQ('');
     setChoices(['', '']);
     setAnswer(0);
+    setErr('');
+  };
+
+  const submitForm = () => {
+    if (!q.trim()) { setErr('Question text is required'); return; }
+    if (choices.some((c) => !c.trim())) { setErr('All choices must be filled in'); return; }
+    setErr('');
+    const entry = { question: q.trim(), choices: choices.map((c) => c.trim()), answer };
+    if (editingIdx !== null) {
+      const next = questions.slice();
+      next[editingIdx] = entry;
+      onChange(next);
+      cancelEdit();
+    } else {
+      onChange(questions.concat([entry]));
+      setQ('');
+      setChoices(['', '']);
+      setAnswer(0);
+    }
   };
 
   return (
@@ -100,10 +115,20 @@ function QuestionBuilder({
                   ))}
                 </Box>
               </Box>
+              <Tooltip title="Edit">
+                <IconButton
+                  size="small"
+                  onClick={() => startEdit(idx)}
+                  disabled={editingIdx !== null}
+                >
+                  ✎
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Remove">
                 <IconButton
                   size="small"
                   onClick={() => onChange(questions.filter((_, i) => i !== idx))}
+                  disabled={editingIdx !== null}
                 >
                   ✕
                 </IconButton>
@@ -123,7 +148,7 @@ function QuestionBuilder({
         }}
       >
         <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', mb: 1 }}>
-          Add Question
+          {editingIdx !== null ? 'Edit Question' : 'Add Question'}
         </Typography>
         {err && (
           <Alert severity="error" sx={{ mb: 1, py: 0 }}>
@@ -166,7 +191,11 @@ function QuestionBuilder({
                 sx={{ flex: 1 }}
               />
               {choices.length > 2 && (
-                <IconButton size="small" onClick={() => removeChoice(i)} sx={{ ml: 0.5 }}>
+                <IconButton size="small" onClick={() => {
+                  const next = choices.filter((_, idx) => idx !== i);
+                  setChoices(next);
+                  if (answer >= next.length) setAnswer(next.length - 1);
+                }} sx={{ ml: 0.5 }}>
                   ✕
                 </IconButton>
               )}
@@ -176,18 +205,25 @@ function QuestionBuilder({
 
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
           {choices.length < 6 && (
-            <Button size="small" variant="outlined" onClick={addChoice} sx={{ borderRadius: 2 }}>
+            <Button size="small" variant="outlined" onClick={() => setChoices(choices.concat(''))} sx={{ borderRadius: 2 }}>
               + Choice
             </Button>
           )}
-          <Button
-            size="small"
-            variant="contained"
-            onClick={addQuestion}
-            sx={{ borderRadius: 2, ml: 'auto' }}
-          >
-            Add Question
-          </Button>
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+            {editingIdx !== null && (
+              <Button size="small" variant="outlined" onClick={cancelEdit} sx={{ borderRadius: 2 }}>
+                Cancel
+              </Button>
+            )}
+            <Button
+              size="small"
+              variant="contained"
+              onClick={submitForm}
+              sx={{ borderRadius: 2 }}
+            >
+              {editingIdx !== null ? 'Save Changes' : 'Add Question'}
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Box>

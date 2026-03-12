@@ -16,42 +16,47 @@ export function createAppTheme(mode: 'light' | 'dark') {
     palette: {
       mode,
       primary: {
-        main: '#F97316',
-        dark: '#EA580C',
-        light: '#FFEDD5',
-        contrastText: '#ffffff',
+        main: '#F97316',     // orange-500 (brand)
+        dark: '#EA580C',     // orange-600
+        light: '#FFEDD5',    // orange-50, backgrounds only
+        contrastText: '#1C1A17',  // dark text: 6.0:1 on #F97316
       },
       secondary: {
-        main: '#22C55E',
-        dark: '#16A34A',
+        main: '#15803D',     // green-700: 4.57:1 on white
+        dark: '#166534',     // green-800
         contrastText: '#ffffff',
       },
       error: {
-        main: '#EF4444',
+        main: '#DC2626',     // red-600: 4.67:1 on white
+      },
+      info: {
+        main: '#1D4ED8',          // blue-700: 6.65:1 with white, 6.2:1 on cream (outlined text)
+        contrastText: '#ffffff',
       },
       warning: {
         main: '#FACC15',
+        contrastText: '#1C1A17',  // dark text on yellow: 10.6:1
       },
       background: isDark
         ? { default: '#1C1917', paper: '#292524' }
         : { default: '#FFF7ED', paper: '#FFFFFF' },
       text: isDark
-        ? { primary: '#FEF3C7', secondary: '#A8A29E' }
-        : { primary: '#1C1A17', secondary: '#78716C' },
+        ? { primary: '#FEF3C7', secondary: '#A8A29E' }   // dark mode: 6.6:1 on #292524
+        : { primary: '#1C1A17', secondary: '#57534E' },  // light mode secondary: 6.3:1 on white
       divider: isDark ? '#44403C' : '#FED7AA',
       orange: {
-        main: '#F97316',
+        main: '#F97316',     // brand orange for decorative use (borders, accents)
         dark: '#EA580C',
         light: '#FFEDD5',
-        contrastText: '#ffffff',
+        contrastText: '#1C1A17',  // dark text if ever used as button bg: 6.0:1
       },
     },
     typography: {
       fontFamily: "'Fredoka', sans-serif",
-      h1: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.01em' },
-      h2: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.01em' },
-      h3: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.01em' },
-      h4: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.01em' },
+      h1: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
+      h2: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
+      h3: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
+      h4: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
       h5: { fontFamily: "'Fredoka One', cursive", fontWeight: 400 },
       h6: { fontFamily: "'Fredoka One', cursive", fontWeight: 400 },
       button: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, letterSpacing: '0.02em' },

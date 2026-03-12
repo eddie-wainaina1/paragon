@@ -148,7 +148,7 @@ async def register_individual(body: RegisterIndividualRequest):
 
 
 @router.get("/verify-email")
-async def verify_email(token: str = Query(...)):
+async def verify_email(token: str = Query()):
     """
     Consume a one-time JWT verification token.
     On success: marks the user verified and redirects to the frontend.

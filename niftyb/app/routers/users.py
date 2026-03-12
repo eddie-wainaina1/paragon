@@ -157,6 +157,19 @@ async def create_user(
         return _user_out(user)
 
 
+@router.get("/{user_id}", response_model=UserOut)
+async def get_user(
+    user_id: str,
+    current_user: User = Depends(require_roles(*Role.admin)),
+):
+    user = User.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if current_user.role == Role.org_admin and str(user.org.id) != str(current_user.org.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot view user from another org")
+    return _user_out(user)
+
+
 @router.put("/{user_id}", response_model=UserOut)
 async def update_user(
     user_id: str,

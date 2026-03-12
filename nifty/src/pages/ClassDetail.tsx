@@ -476,7 +476,7 @@ export default function ClassDetail() {
                           {c.completed ? (
                             <Chip label="Done" size="small" color="success" sx={{ fontWeight: 700 }} />
                           ) : c.accessible ? (
-                            <Chip label="In progress" size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
+                            <Chip label="In progress" size="small" color="info" variant="outlined" sx={{ fontWeight: 700 }} />
                           ) : (
                             <Chip label="Locked" size="small" variant="outlined" sx={{ fontWeight: 700, color: 'text.disabled' }} />
                           )}
@@ -667,7 +667,7 @@ export default function ClassDetail() {
                                   <span>
                                     <Button
                                       size="small"
-                                      color="warning"
+                                      color="info"
                                       variant="outlined"
                                       sx={{ borderRadius: 50, fontSize: '0.78rem' }}
                                       onClick={() => {
@@ -739,7 +739,7 @@ export default function ClassDetail() {
                   <Switch
                     checked={addBlocking}
                     onChange={(e) => setAddBlocking(e.target.checked)}
-                    color="warning"
+                    color="primary"
                   />
                 }
                 label={

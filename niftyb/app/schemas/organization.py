@@ -5,7 +5,7 @@ from app.constants import OrgType
 
 
 class OrgCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=200)
     type: str = Field("school", pattern=OrgType.pattern())
     internal: bool = False
     admin_email: Optional[EmailStr] = None

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -31,10 +31,10 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
-import { ContentTypeStyle, Role } from '@/constants';
-import type { Content, ContentType, ContentScope, AssessmentQuestion } from '@/types';
+import { ContentTypeStyle, ContentTypeOptions, Role } from '@/constants';
+import type { Content, ContentScope, AssessmentQuestion } from '@/types';
 
-// ── Inline question builder (add only) ───────────────────────────────────────
+// ── Shared question form (add & edit) ────────────────────────────────────────
 
 interface DraftQuestion {
   question: string;
@@ -42,25 +42,37 @@ interface DraftQuestion {
   answer: number;
 }
 
-function AddQuestionForm({ onAdd }: { onAdd: (q: DraftQuestion) => void }) {
-  const [q, setQ] = useState('');
-  const [choices, setChoices] = useState(['', '']);
-  const [answer, setAnswer] = useState(0);
+function QuestionForm({
+  initialValues,
+  onSave,
+  onCancel,
+}: {
+  initialValues?: DraftQuestion;
+  onSave: (q: DraftQuestion) => void;
+  onCancel?: () => void;
+}) {
+  const [q, setQ] = useState(initialValues?.question ?? '');
+  const [choices, setChoices] = useState(initialValues?.choices ?? ['', '']);
+  const [answer, setAnswer] = useState(initialValues?.answer ?? 0);
   const [err, setErr] = useState('');
 
   const submit = () => {
     if (!q.trim()) { setErr('Question text is required'); return; }
     if (choices.some((c) => !c.trim())) { setErr('All choices must be filled in'); return; }
     setErr('');
-    onAdd({ question: q.trim(), choices: choices.map((c) => c.trim()), answer });
-    setQ('');
-    setChoices(['', '']);
-    setAnswer(0);
+    onSave({ question: q.trim(), choices: choices.map((c) => c.trim()), answer });
+    if (!initialValues) {
+      setQ('');
+      setChoices(['', '']);
+      setAnswer(0);
+    }
   };
 
   return (
     <Box sx={{ p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 2, bgcolor: 'action.hover' }}>
-      <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', mb: 1 }}>Add Question</Typography>
+      <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', mb: 1 }}>
+        {initialValues ? 'Edit Question' : 'Add Question'}
+      </Typography>
       {err && <Alert severity="error" sx={{ mb: 1, py: 0 }}>{err}</Alert>}
       <TextField
         label="Question"
@@ -104,9 +116,16 @@ function AddQuestionForm({ onAdd }: { onAdd: (q: DraftQuestion) => void }) {
             + Choice
           </Button>
         )}
-        <Button size="small" variant="contained" onClick={submit} sx={{ borderRadius: 2, ml: 'auto' }}>
-          Add Question
-        </Button>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          {onCancel && (
+            <Button size="small" variant="outlined" onClick={onCancel} sx={{ borderRadius: 2 }}>
+              Cancel
+            </Button>
+          )}
+          <Button size="small" variant="contained" onClick={submit} sx={{ borderRadius: 2 }}>
+            {initialValues ? 'Save Changes' : 'Add Question'}
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
@@ -122,31 +141,78 @@ interface EditDialogProps {
 }
 
 function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
-  const queryClient = useQueryClient();
   const [title, setTitle] = useState(content?.title ?? '');
   const [subject, setSubject] = useState(content?.subject ?? '');
   const [body, setBody] = useState(content?.body ?? '');
-  const [type, setType] = useState<ContentType>((content?.type as ContentType) ?? 'text');
   const [scope, setScope] = useState<ContentScope>((content?.scope as ContentScope) ?? 'org');
   const [passingScore, setPassingScore] = useState(content?.passing_score ?? 70);
   const [maxQuestions, setMaxQuestions] = useState(String(content?.max_questions ?? ''));
   const [error, setError] = useState('');
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [localQuestions, setLocalQuestions] = useState<Array<AssessmentQuestion | DraftQuestion>>([]);
 
-  // Fetch questions for test type
-  const { data: existingQuestions = [], refetch: refetchQuestions } = useQuery({
+  const contentType = content?.type ?? 'text';
+
+  // Fetch existing questions (assessment only); used as the baseline for diffing on save
+  const { data: fetchedQuestions = [], isFetched: questionsFetched } = useQuery({
     queryKey: ['content', content?.id, 'questions'],
     queryFn: () => contentApi.getQuestions(content!.id),
     enabled: !!content && content.type === 'assessment',
   });
 
+  // Populate local state once per content item open
+  useEffect(() => {
+    if (questionsFetched) {
+      setLocalQuestions(fetchedQuestions);
+      setEditingIdx(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content?.id, questionsFetched]);
+
   const updateMutation = useMutation({
-    mutationFn: () => {
-      const payload: Record<string, unknown> = { title, subject, body, type, scope };
-      if (type === 'assessment') {
-        payload.passing_score = passingScore;
-        payload.max_questions = maxQuestions ? Number(maxQuestions) : null;
+    mutationFn: async () => {
+      // 1. Update content metadata (only changed fields)
+      const payload: Record<string, unknown> = {};
+      if (title !== content?.title) payload.title = title;
+      if (subject !== content?.subject) payload.subject = subject;
+      if (body !== content?.body) payload.body = body;
+      if (scope !== content?.scope) payload.scope = scope;
+      if (contentType === 'assessment') {
+        if (passingScore !== content?.passing_score) payload.passing_score = passingScore;
+        const origMax = String(content?.max_questions ?? '');
+        if (maxQuestions !== origMax) payload.max_questions = maxQuestions ? Number(maxQuestions) : null;
       }
-      return contentApi.update(content!.id, payload as Parameters<typeof contentApi.update>[1]);
+      if (Object.keys(payload).length > 0) {
+        await contentApi.update(content!.id, payload as Parameters<typeof contentApi.update>[1]);
+      }
+
+      // 2. Commit question changes (assessment only)
+      if (contentType === 'assessment') {
+        const origMap = new Map(fetchedQuestions.map((q) => [q.qid, q]));
+        const localExisting = localQuestions.filter((q): q is AssessmentQuestion => 'qid' in q);
+        const localQids = new Set(localExisting.map((q) => q.qid));
+
+        // Delete questions removed from the local list
+        const toDelete = fetchedQuestions.filter((q) => !localQids.has(q.qid));
+        await Promise.all(toDelete.map((q) => contentApi.deleteQuestion(content!.id, q.qid)));
+
+        // Update questions whose content changed
+        const toUpdate = localExisting.filter((q) => {
+          const orig = origMap.get(q.qid);
+          return orig && (
+            orig.question !== q.question ||
+            orig.answer !== q.answer ||
+            JSON.stringify(orig.choices) !== JSON.stringify(q.choices)
+          );
+        });
+        await Promise.all(toUpdate.map((q) => contentApi.updateQuestion(content!.id, q.qid, q)));
+
+        // Add newly created questions (no qid)
+        const toAdd = localQuestions.filter((q): q is DraftQuestion => !('qid' in q));
+        if (toAdd.length > 0) {
+          await contentApi.addQuestions(content!.id, toAdd);
+        }
+      }
     },
     onSuccess: () => {
       onSaved();
@@ -157,23 +223,6 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         'Failed to save changes';
       setError(msg);
-    },
-  });
-
-  const addQuestionMutation = useMutation({
-    mutationFn: (q: Omit<AssessmentQuestion, 'qid'>) =>
-      contentApi.addQuestions(content!.id, [q]),
-    onSuccess: () => {
-      refetchQuestions();
-      queryClient.invalidateQueries({ queryKey: ['content'] });
-    },
-  });
-
-  const deleteQuestionMutation = useMutation({
-    mutationFn: (qid: string) => contentApi.deleteQuestion(content!.id, qid),
-    onSuccess: () => {
-      refetchQuestions();
-      queryClient.invalidateQueries({ queryKey: ['content'] });
     },
   });
 
@@ -213,16 +262,20 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
           />
-          <FormControl fullWidth>
-            <InputLabel>Type</InputLabel>
-            <Select value={type} label="Type" onChange={(e) => setType(e.target.value as ContentType)}>
-              <MenuItem value="text">📄 Text</MenuItem>
-              <MenuItem value="video">🎬 Video</MenuItem>
-              <MenuItem value="audio">🎧 Audio</MenuItem>
-              <MenuItem value="pdf">📑 PDF</MenuItem>
-              <MenuItem value="assessment">📝 Assessment</MenuItem>
-            </Select>
-          </FormControl>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              Content Type
+            </Typography>
+            <Chip
+              label={`${ContentTypeOptions.find((o) => o.value === contentType)?.icon ?? ''} ${contentType}`}
+              size="small"
+              sx={{
+                fontWeight: 700,
+                background: (ContentTypeStyle.chip as Record<string, { bg: string; color: string }>)[contentType ?? '']?.bg,
+                color: (ContentTypeStyle.chip as Record<string, { bg: string; color: string }>)[contentType ?? '']?.color,
+              }}
+            />
+          </Box>
           {canGlobal && (
             <FormControl fullWidth>
               <InputLabel>Scope</InputLabel>
@@ -232,7 +285,7 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
               </Select>
             </FormControl>
           )}
-          {type === 'text' && (
+          {contentType === 'text' && (
             <TextField
               label="Body"
               fullWidth
@@ -243,8 +296,8 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
             />
           )}
 
-          {/* Test-specific settings */}
-          {type === 'assessment' && (
+          {/* Assessment-specific settings */}
+          {contentType === 'assessment' && (
             <>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
@@ -270,53 +323,80 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
 
               <Divider />
               <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                Question Bank ({existingQuestions.length} questions)
+                Question Bank ({localQuestions.length} questions)
               </Typography>
 
-              {existingQuestions.map((q: AssessmentQuestion) => (
-                <Box
-                  key={q.qid}
-                  sx={{
-                    p: 1.5,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 1,
-                  }}
-                >
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{q.question}</Typography>
-                    <Box sx={{ pl: 1 }}>
-                      {q.choices.map((c, ci) => (
-                        <Typography
-                          key={ci}
-                          variant="caption"
-                          display="block"
-                          sx={{ color: ci === q.answer ? 'success.main' : 'text.secondary' }}
-                        >
-                          {ci === q.answer ? '✓' : '○'} {c}
-                        </Typography>
-                      ))}
+              {localQuestions.map((q, idx) =>
+                editingIdx === idx ? (
+                  <QuestionForm
+                    key={idx}
+                    initialValues={q}
+                    onSave={(updated) => {
+                      const next = localQuestions.slice();
+                      next[idx] = 'qid' in q
+                        ? { qid: q.qid, question: updated.question, choices: updated.choices, answer: updated.answer }
+                        : updated;
+                      setLocalQuestions(next);
+                      setEditingIdx(null);
+                    }}
+                    onCancel={() => setEditingIdx(null)}
+                  />
+                ) : (
+                  <Box
+                    key={idx}
+                    sx={{
+                      p: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 1,
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{q.question}</Typography>
+                      <Box sx={{ pl: 1 }}>
+                        {q.choices.map((c, ci) => (
+                          <Typography
+                            key={ci}
+                            variant="caption"
+                            display="block"
+                            sx={{ color: ci === q.answer ? 'success.main' : 'text.secondary' }}
+                          >
+                            {ci === q.answer ? '✓' : '○'} {c}
+                          </Typography>
+                        ))}
+                      </Box>
                     </Box>
+                    <Tooltip title="Edit question">
+                      <IconButton
+                        size="small"
+                        onClick={() => setEditingIdx(idx)}
+                        disabled={editingIdx !== null}
+                      >
+                        ✎
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete question">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => setLocalQuestions(localQuestions.filter((_, i) => i !== idx))}
+                        disabled={editingIdx !== null}
+                      >
+                        ✕
+                      </IconButton>
+                    </Tooltip>
                   </Box>
-                  <Tooltip title="Delete question">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => deleteQuestionMutation.mutate(q.qid)}
-                      disabled={deleteQuestionMutation.isPending}
-                    >
-                      ✕
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              ))}
+                )
+              )}
 
-              <AddQuestionForm
-                onAdd={(q) => addQuestionMutation.mutate(q)}
-              />
+              {editingIdx === null && (
+                <QuestionForm
+                  onSave={(q) => setLocalQuestions(localQuestions.concat([q]))}
+                />
+              )}
             </>
           )}
 
@@ -343,6 +423,7 @@ export default function MyContent() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [editingContent, setEditingContent] = useState<Content | null>(null);
+  const [editKey, setEditKey] = useState(0);
   const canGlobal = Role.global_scope.includes(user?.role as never);
 
   const { data: all = [], isLoading } = useQuery({
@@ -441,7 +522,7 @@ export default function MyContent() {
                           size="small"
                           variant="contained"
                           sx={{ borderRadius: 50, fontSize: '0.78rem', py: 0.5 }}
-                          onClick={() => setEditingContent(c)}
+                          onClick={() => { setEditingContent(c); setEditKey((k) => k + 1); }}
                         >
                           Edit
                         </Button>
@@ -466,6 +547,7 @@ export default function MyContent() {
       </Paper>
 
       <EditDialog
+        key={editKey}
         content={editingContent}
         canGlobal={canGlobal}
         onClose={() => setEditingContent(null)}

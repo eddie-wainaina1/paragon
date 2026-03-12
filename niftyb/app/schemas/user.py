@@ -5,10 +5,10 @@ from app.constants import Role
 
 
 class UserCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=200)
     email: EmailStr
-    password: str = Field(..., min_length=6)
-    role: str = Field(..., pattern=Role.pattern())
+    password: str = Field(min_length=6)
+    role: str = Field(pattern=Role.pattern())
     org_id: str
 
 
@@ -40,18 +40,18 @@ class AcceptTermsRequest(BaseModel):
 
 
 class RegisterOrgRequest(BaseModel):
-    org_name: str = Field(..., min_length=1, max_length=200)
-    admin_first: str = Field(..., min_length=1, max_length=100)
+    org_name: str = Field(min_length=1, max_length=200)
+    admin_first: str = Field(min_length=1, max_length=100)
     admin_last: str = Field(default="", max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=6)
+    password: str = Field(min_length=6)
 
 
 class RegisterIndividualRequest(BaseModel):
-    first_name: str = Field(..., min_length=1, max_length=100)
+    first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(default="", max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=6)
+    password: str = Field(min_length=6)
 
 
 class LoginRequest(BaseModel):
@@ -65,7 +65,7 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(min_length=6)
 
 
 class TokenResponse(BaseModel):

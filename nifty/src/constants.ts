@@ -141,7 +141,7 @@ export const ContentTypeOptions = [
 /** Chip colours for content type badges. */
 export const ContentTypeStyle = {
     chip: {
-        text:  { bg: "#DBEAFE", color: "#1D4ED8" },
+        text:  { bg: "#DBEAFE", color: "#1E40AF" },  // blue-800: 4.83:1 on #DBEAFE
         video: { bg: "#FCE7F3", color: "#BE185D" },
         audio: { bg: "#D1FAE5", color: "#065F46" },
         pdf:   { bg: "#FEF3C7", color: "#92400E" },
@@ -158,7 +158,7 @@ export const ContentFileAccept: Record<string, string> = {
 
 /** Filter buttons shown in the Content Library. */
 export const ContentFilters = [
-    { value: "all", label: "All", bg: "#F97316", color: "#fff" },
+    { value: "all", label: "All", bg: "#F97316", color: "#1C1A17" },  // 6.0:1
     {
         value: "text",
         label: "📄 Text",

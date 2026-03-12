@@ -39,7 +39,7 @@ class Content(Document):
     file_name = StringField()
     file_content_type = StringField()
     hls_ready = BooleanField(default=False)
-    hls_files = DictField(default=dict)  # {"master.m3u8": "<oid>", "720p_000.ts": "<oid>", ...}
+    hls_files = DictField(default=dict)  # {"master.m3u8": "<oid>", "720p_000.ts": "<oid>"}
     views = IntField(default=0, min_value=0)
     locked = BooleanField(default=False)
     emoji = StringField(max_length=10)

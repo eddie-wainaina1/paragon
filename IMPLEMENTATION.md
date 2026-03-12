@@ -805,7 +805,7 @@ current_user: User = Depends(require_roles(*Role.admin))
 For more nuanced checks within handlers (e.g., org_admin cannot touch another org):
 ```python
 if current_user.role == Role.org_admin and str(user.org.id) != str(current_user.org.id):
-    raise HTTPException(403, ...)
+    raise HTTPException(403, "Error message")
 ```
 
 ### Content visibility

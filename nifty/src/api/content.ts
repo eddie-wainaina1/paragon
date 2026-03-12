@@ -36,6 +36,9 @@ export const contentApi = {
   addQuestions: (id: string, questions: Omit<AssessmentQuestion, 'qid'>[]) =>
     apiClient.post<Content>(`/content/${id}/questions`, { questions }).then((r) => r.data),
 
+  updateQuestion: (id: string, qid: string, q: Omit<AssessmentQuestion, 'qid'>) =>
+    apiClient.patch<Content>(`/content/${id}/questions/${qid}`, q).then((r) => r.data),
+
   deleteQuestion: (id: string, qid: string) =>
     apiClient.delete(`/content/${id}/questions/${qid}`),
 };

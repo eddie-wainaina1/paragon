@@ -49,7 +49,7 @@ BANNER = """
 ║          Nifty by Paragon  —  Python Console          ║
 ╠═══════════════════════════════════════════════════════╣
 ║  Models   : User, Organization, Content, Class        ║
-║  Schemas  : UserOut, OrgOut, ContentOut, ClassOut ... ║
+║  Schemas  : UserOut, OrgOut, ContentOut, ClassOut     ║
 ║  Constants: Role, OrgType, ContentType, ContentScope  ║
 ║  Security : hash_password, create_access_token        ║
 ║  Config   : settings                                  ║

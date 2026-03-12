@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -23,6 +24,7 @@ import { usersApi } from '@/api/users';
 import { contentApi } from '@/api/content';
 
 export default function Organizations() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [orgName, setOrgName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -164,7 +166,11 @@ export default function Organizations() {
                 const contentCount = contentList.filter((c) => c.org === o.id).length;
                 const isPlatform = o.type === 'platform';
                 return (
-                  <TableRow key={o.id}>
+                  <TableRow
+                    key={o.id}
+                    onClick={() => navigate(`/app/organizations/${o.id}`)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography fontWeight={700}>{o.name}</Typography>
@@ -190,7 +196,7 @@ export default function Organizations() {
                     </TableCell>
                     <TableCell>👥 {userCount}</TableCell>
                     <TableCell>📚 {contentCount}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {!isPlatform && (
                         <Button
                           size="small"

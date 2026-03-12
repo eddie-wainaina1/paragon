@@ -11,7 +11,7 @@ from jose import JWTError
 
 from app.models.content import Content
 from app.models.user import User
-from app.schemas.content import ContentCreate, ContentUpdate, ContentOut, AddQuestionsRequest, AssessmentQuestionOut
+from app.schemas.content import ContentCreate, ContentUpdate, ContentOut, AddQuestionsRequest, AssessmentQuestionIn, AssessmentQuestionOut
 from app.models.content import AssessmentQuestion
 from app.utils.deps import CurrentUser, StreamUser, require_roles
 from app.utils.security import create_file_access_token, decode_token
@@ -228,7 +228,7 @@ async def delete_content(content_id: str, current_user: CurrentUser):
 async def upload_file(
     content_id: str,
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    file: UploadFile = File(),
     current_user: User = Depends(require_roles(*Role.creator)),
 ):
     """Upload a file to GridFS and attach it to the content item.
@@ -346,6 +346,39 @@ async def add_questions(content_id: str, body: AddQuestionsRequest, current_user
         content.questions.append(
             AssessmentQuestion(question=q.question, choices=q.choices, answer=q.answer)
         )
+
+    content.updated_at = datetime.now(timezone.utc)
+    content.save()
+    await cache_delete(f"content:{content_id}")
+    await cache_delete_pattern("content:list:*")
+    return _content_out(content)
+
+
+@router.patch("/{content_id}/questions/{qid}", response_model=ContentOut)
+async def update_question(content_id: str, qid: str, body: AssessmentQuestionIn, current_user: CurrentUser):
+    """Update a single question in an assessment in-place."""
+    content = Content.get_by_id(content_id)
+    if not content:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Content not found")
+    if content.type != "assessment":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Content is not an assessment")
+    if str(content.author.id) != str(current_user.id) and current_user.role not in Role.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorised")
+
+    if body.answer < 0 or body.answer >= len(body.choices):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"Answer index {body.answer} is out of range",
+        )
+
+    for q in content.questions:
+        if q.qid == qid:
+            q.question = body.question
+            q.choices = body.choices
+            q.answer = body.answer
+            break
+    else:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Question not found")
 
     content.updated_at = datetime.now(timezone.utc)
     content.save()

@@ -237,7 +237,11 @@ export default function Users() {
                 const isMe = u.id === currentUser?.id;
                 const canImpersonate = isSuperAdmin && !isMe && u.role !== Role.super_admin;
                 return (
-                  <TableRow key={u.id}>
+                  <TableRow
+                    key={u.id}
+                    onClick={() => navigate(`/app/users/${u.id}`)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Avatar
@@ -276,7 +280,7 @@ export default function Users() {
                         sx={{ fontWeight: 700 }}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {isMe ? (
                         <Typography variant="caption" color="text.secondary">
                           You
@@ -287,6 +291,7 @@ export default function Users() {
                             <Button
                               size="small"
                               variant="outlined"
+                              color="secondary"
                               sx={{ borderRadius: 50, fontSize: '0.78rem' }}
                               onClick={() => impersonateMutation.mutate(u.id)}
                               disabled={impersonateMutation.isPending}

@@ -9,7 +9,9 @@ import MyContent from '@/pages/MyContent';
 import Classes from '@/pages/Classes';
 import ClassDetail from '@/pages/ClassDetail';
 import Users from '@/pages/Users';
+import UserDetail from '@/pages/UserDetail';
 import Organizations from '@/pages/Organizations';
+import OrgDetail from '@/pages/OrgDetail';
 import Profile from '@/pages/Profile';
 import ResetPassword from '@/pages/ResetPassword';
 import Terms from '@/pages/Terms';
@@ -41,7 +43,9 @@ export default function App() {
         <Route path="classes" element={<Classes />} />
         <Route path="classes/:id" element={<ClassDetail />} />
         <Route path="users" element={<Users />} />
+        <Route path="users/:id" element={<UserDetail />} />
         <Route path="organizations" element={<Organizations />} />
+        <Route path="organizations/:id" element={<OrgDetail />} />
         <Route path="profile" element={<Profile />} />
       </Route>
       <Route path="/reset-password" element={<ResetPassword />} />

@@ -6,7 +6,7 @@ from app.schemas.content import AssessmentQuestionForStudent
 
 
 class ClassCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    name: str = Field(min_length=1, max_length=200)
     grade: Optional[str] = Field(None, max_length=100)
     scope: Optional[str] = Field(ClassScope.org, pattern=ClassScope.pattern())
 

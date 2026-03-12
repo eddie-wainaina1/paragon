@@ -143,7 +143,7 @@ export default function Classes() {
                     <Switch
                       checked={scope === 'global'}
                       onChange={(e) => setScope(e.target.checked ? 'global' : 'org')}
-                      color="warning"
+                      color="primary"
                     />
                   }
                   label={

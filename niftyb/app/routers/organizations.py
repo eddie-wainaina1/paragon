@@ -43,6 +43,17 @@ async def list_orgs(current_user: CurrentUser):
             return [_org_out(current_user.org)]
 
 
+@router.get("/{org_id}", response_model=OrgOut)
+async def get_org(org_id: str, current_user: CurrentUser):
+    org = Organization.get_by_id(org_id)
+    if not org:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
+    # Non-super_admin can only view their own org
+    if current_user.role != Role.super_admin and str(current_user.org.id) != org_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot view another organization")
+    return _org_out(org)
+
+
 @router.post("", response_model=OrgOut, status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(require_roles(Role.super_admin))])
 async def create_org(body: OrgCreate):

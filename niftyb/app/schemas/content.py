@@ -5,9 +5,9 @@ from app.constants import ContentType, ContentScope
 
 
 class AssessmentQuestionIn(BaseModel):
-    question: str = Field(..., min_length=1, max_length=1000)
-    choices: List[str] = Field(..., min_length=2, max_length=6)
-    answer: int = Field(..., ge=0)  # 0-based index into choices
+    question: str = Field(min_length=1, max_length=1000)
+    choices: List[str] = Field(min_length=2, max_length=6)
+    answer: int = Field(ge=0)  # 0-based index into choices
 
 
 class AssessmentQuestionOut(BaseModel):
@@ -28,8 +28,8 @@ class AddQuestionsRequest(BaseModel):
 
 
 class ContentCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=300)
-    type: str = Field(..., pattern=ContentType.pattern())
+    title: str = Field(min_length=1, max_length=300)
+    type: str = Field(pattern=ContentType.pattern())
     scope: str = Field("org", pattern=ContentScope.pattern())
     subject: Optional[str] = Field(None, max_length=200)
     body: Optional[str] = None

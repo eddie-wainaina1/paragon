@@ -134,7 +134,7 @@ export default function Landing() {
           lineHeight: 1.1,
           zIndex: 1,
           textShadow: '0 3px 12px rgba(0,0,0,0.25)',
-          letterSpacing: '0.01em',
+          letterSpacing: '0.02em',
         }}
       >
         <Box component="span" sx={{ color: '#FDE68A' }}>

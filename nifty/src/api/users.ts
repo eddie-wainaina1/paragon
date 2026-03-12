@@ -7,6 +7,8 @@ export const usersApi = {
   updateMe: (data: Partial<{ name: string; email: string; password: string }>) =>
     apiClient.put<User>('/users/me', data).then((r) => r.data),
 
+  getById: (id: string) => apiClient.get<User>(`/users/${id}`).then((r) => r.data),
+
   list: () => apiClient.get<User[]>('/users').then((r) => r.data),
 
   create: (data: UserCreate) =>
