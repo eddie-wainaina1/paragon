@@ -1,0 +1,82 @@
+{# ── CTA button ───────────────────────────────────────────────────────────── #}
+{# Usage: {{ cta_button(url, "Label Text") }}                                 #}
+{% macro cta_button(url, label, margin="28px 0") %}
+<table cellpadding="0" cellspacing="0" border="0" class="btn-table" style="margin:{{ margin }};">
+  <tr>
+    <td class="btn-wrap">
+      <a href="{{ url }}" class="btn">{{ label }} &rarr;</a>
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# ── Fallback link ────────────────────────────────────────────────────────── #}
+{# Usage: {{ fallback_link(url) }}                                             #}
+{% macro fallback_link(url) %}
+<p class="p-meta">Button not working? Copy and paste this link into your browser:</p>
+<p class="fallback-url"><a href="{{ url }}" class="link">{{ url }}</a></p>
+{% endmacro %}
+
+{# ── Info box (e.g. credentials) ─────────────────────────────────────────── #}
+{# Usage: {{ info_box("Label", "value") }}                                    #}
+{% macro info_box(label, value) %}
+<table cellpadding="0" cellspacing="0" border="0" width="100%" class="info-box">
+  <tr>
+    <td class="info-box-inner">
+      <p class="info-box-label">{{ label }}</p>
+      <p class="info-box-value">{{ value }}</p>
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# ── Warning box ──────────────────────────────────────────────────────────── #}
+{# Usage: {% call warning_box() %}...content...{% endcall %}                  #}
+{% macro warning_box() %}
+<table cellpadding="0" cellspacing="0" border="0" width="100%" class="warning-box">
+  <tr>
+    <td class="warning-box-inner">{{ caller() }}</td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# ── Detail table ─────────────────────────────────────────────────────────── #}
+{# Usage: {{ detail_table(rows, header="Title") }}                            #}
+{# rows: list of (label, value) tuples; value may be safe HTML               #}
+{% macro detail_table(rows, header=None) %}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" class="detail-table">
+  {% if header %}
+  <tr>
+    <td colspan="2" class="detail-table-header">{{ header }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td class="detail-table-body" colspan="2">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        {% for label, value in rows %}
+        <tr>
+          <td class="detail-label">{{ label }}</td>
+          <td class="detail-value">{{ value }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# ── Change list ──────────────────────────────────────────────────────────── #}
+{# Usage: {{ change_list(changes) }}                                          #}
+{% macro change_list(changes) %}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" class="change-list">
+  {% for change in changes %}
+  <tr class="{{ '' if loop.last else 'change-row' }}">
+    <td class="change-cell">{{ change }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endmacro %}
+
+{# ── Inline code tag ──────────────────────────────────────────────────────── #}
+{# Usage: {{ code("student") }}                                               #}
+{% macro code(text) %}<code class="code">{{ text }}</code>{% endmacro %}
