@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from app.schemas.user import UserCreate, UserUpdate, UserOut, AcceptTermsRequest
 from app.utils.security import hash_password, create_verification_token
 from app.utils.deps import CurrentUser, require_roles
-from app.email import send_welcome_email
+from app.email import send_welcome_email, send_account_updated_email
 from app.config import settings
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
@@ -52,14 +52,20 @@ async def update_me(body: UserUpdate, current_user: CurrentUser):
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
+    changes: list[str] = []
+    original_email = user.email  # capture before any email change
+
     if body.name:
+        changes.append(f"Your display name was updated to \"{body.name}\".")
         user.name = body.name
         user.avatar = "".join(w[0] for w in body.name.split() if w)[:2].upper()
     if body.email:
         if User.email_exists(body.email, exclude_id=str(user.id)):
             raise HTTPException(status.HTTP_409_CONFLICT, "Email already taken")
+        changes.append(f"Your email address was updated to \"{body.email}\".")
         user.email = body.email
     if body.password:
+        changes.append("Your password was changed.")
         user.password_hash = hash_password(body.password)
     # Role changes are not permitted via self-update
 
@@ -67,6 +73,11 @@ async def update_me(body: UserUpdate, current_user: CurrentUser):
     await cache_delete(f"users:list:{user.org.id}")
     await cache_delete("users:list:all")
     await cache_delete(f"user:{str(user.id)}")
+
+    if changes:
+        # Notify original address; use updated name if it changed, otherwise original
+        asyncio.create_task(send_account_updated_email(user.name, original_email, changes))
+
     return _user_out(user)
 
 
@@ -190,23 +201,36 @@ async def update_user(
             status.HTTP_403_FORBIDDEN, "Insufficient permissions for that role"
         )
 
+    changes: list[str] = []
+    original_name = user.name
+    original_email = user.email  # capture before any email change
+
     if body.name:
+        changes.append(f"Your display name was updated to \"{body.name}\".")
         user.name = body.name
         user.avatar = "".join(w[0] for w in body.name.split() if w)[:2].upper()
     if body.email:
         if User.email_exists(body.email, exclude_id=user_id):
             raise HTTPException(status.HTTP_409_CONFLICT, "Email already taken")
+        changes.append(f"Your email address was updated to \"{body.email}\".")
         user.email = body.email
     if body.password:
+        changes.append("Your password was changed.")
         user.password_hash = hash_password(body.password)
     if body.role:
         _check_role_org_compat(body.role, user.org)
+        changes.append(f"Your account role was changed to \"{body.role}\".")
         user.role = body.role
+        user.tutor_application_pending = False  # clear pending flag on any role change
 
     user.save()
     await cache_delete(f"users:list:{user.org.id}")
     await cache_delete("users:list:all")
     await cache_delete(f"user:{user_id}")
+
+    if changes:
+        asyncio.create_task(send_account_updated_email(original_name, original_email, changes))
+
     return _user_out(user)
 
 

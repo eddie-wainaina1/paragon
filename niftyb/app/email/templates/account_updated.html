@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Your Nifty account was updated{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#1a1a1a;">
+  Account update notice
+</p>
+<p style="margin:0 0 20px 0;color:#555555;">
+  Hi {{ user_name }}, the following change{{ 's were' if changes|length > 1 else ' was' }} made to your Nifty by Paragon account:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="border:1px solid #f0e8e0;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+  {% for change in changes %}
+  <tr style="{% if not loop.last %}border-bottom:1px solid #f0e8e0;{% endif %}">
+    <td style="padding:12px 16px;font-size:14px;color:#1a1a1a;line-height:1.5;">
+      {{ change }}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#FFF7ED;border:1px solid #FDDCB0;border-radius:6px;margin-bottom:24px;">
+  <tr>
+    <td style="padding:14px 16px;font-size:14px;color:#92400E;line-height:1.6;">
+      <strong>Didn't expect this?</strong>&nbsp;If you did not expect these changes,please contact our support team immediately at
+      <a href="mailto:support@paragoneschool.com" style="color:#F97316;font-weight:600;text-decoration:none;">support@paragoneschool.com</a>.
+    </td>
+  </tr>
+</table>
+{% endblock %}

@@ -13,6 +13,8 @@ import {
   CircularProgress,
   Divider,
   Link as MuiLink,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink } from 'react-router-dom';
@@ -54,6 +56,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const [indLastName, setIndLastName] = useState('');
   const [indEmail, setIndEmail] = useState('');
   const [indPassword, setIndPassword] = useState('');
+  const [applyAsTutor, setApplyAsTutor] = useState(false);
+  const [indPhone, setIndPhone] = useState('');
 
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -77,6 +81,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
       setIndLastName('');
       setIndEmail('');
       setIndPassword('');
+      setApplyAsTutor(false);
+      setIndPhone('');
       setForgotEmail('');
     }
   }, [open, initialTab]);
@@ -154,6 +160,10 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
       setError('Please fill all required fields');
       return;
     }
+    if (applyAsTutor && !indPhone.trim()) {
+      setError('Please provide a phone number for your tutor application');
+      return;
+    }
     setLoading(true);
     try {
       const res = await authApi.registerIndividual({
@@ -161,6 +171,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         last_name: indLastName,
         email: indEmail,
         password: indPassword,
+        apply_as_tutor: applyAsTutor,
+        phone: applyAsTutor ? indPhone.trim() : undefined,
       });
       if (res.user.verified === false) {
         setIndSuccess(true);
@@ -393,15 +405,18 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         {view === 'individual' && (
           <Box component="form" onSubmit={handleRegisterIndividual}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
-              Join Nifty Academy 🎓
+              {applyAsTutor ? 'Apply as Tutor ⭐' : 'Join Nifty Academy 🎓'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Sign up as an individual learner — you'll be enrolled in Nifty Academy
+              {applyAsTutor
+                ? 'Your account will start as a student while we review your application. We\'ll contact you to follow up.'
+                : 'Sign up as an individual learner — you\'ll be enrolled in Nifty Academy'}
             </Typography>
 
             {indSuccess && (
               <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
                 Account created — please check your email to verify your account before logging in.
+                {applyAsTutor && ' Your tutor application has been received and is under review.'}
               </Alert>
             )}
 
@@ -436,6 +451,37 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               sx={{ mb: 2 }}
               required
             />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={applyAsTutor}
+                  onChange={(e) => setApplyAsTutor(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" fontWeight={600}>
+                  Apply for a tutor account
+                </Typography>
+              }
+              sx={{ mb: applyAsTutor ? 1.5 : 2 }}
+            />
+
+            {applyAsTutor && (
+              <TextField
+                label="Phone Number"
+                type="tel"
+                fullWidth
+                value={indPhone}
+                onChange={(e) => setIndPhone(e.target.value)}
+                placeholder="e.g. +1 555 000 1234"
+                helperText="We'll use this to contact you about your tutor application."
+                sx={{ mb: 2 }}
+                required
+              />
+            )}
+
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               By creating an account, you agree to our{' '}
               <MuiLink component={RouterLink} to="/terms" target="_blank" rel="noopener">
@@ -451,7 +497,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
               disabled={loading}
               startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
             >
-              Join Nifty Academy →
+              {applyAsTutor ? 'Submit Application →' : 'Join Nifty Academy →'}
             </Button>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
               Already have an account?{' '}

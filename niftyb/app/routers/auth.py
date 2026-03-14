@@ -17,7 +17,7 @@ from app.utils.security import (
     decode_token,
 )
 from app.utils.deps import require_roles
-from app.email import send_welcome_email, send_reset_password_email
+from app.email import send_welcome_email, send_reset_password_email, send_tutor_application_email
 from app.telemetry import get_tracer
 from app.constants import Role, OrgType
 from app.config import settings
@@ -133,6 +133,8 @@ async def register_individual(body: RegisterIndividualRequest):
             role=Role.student,
             org=academy,
             avatar=avatar,
+            phone=body.phone if body.apply_as_tutor else None,
+            tutor_application_pending=body.apply_as_tutor,
         )
         user.save()
 
@@ -140,10 +142,16 @@ async def register_individual(body: RegisterIndividualRequest):
         verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
         asyncio.create_task(send_welcome_email(user, verification_url))
 
+        if body.apply_as_tutor:
+            asyncio.create_task(send_tutor_application_email(user, body.phone))
+
         token = create_access_token(
             {"sub": str(user.id), "role": user.role, "org": str(academy.id)}
         )
-        logger.info("Individual registered", extra={"user_id": str(user.id)})
+        logger.info(
+            "Individual registered",
+            extra={"user_id": str(user.id), "tutor_application": body.apply_as_tutor},
+        )
         return TokenResponse(access_token=token, user=_user_out(user))
 
 

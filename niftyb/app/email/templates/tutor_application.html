@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}New Tutor Application — {{ applicant_name }}{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#1a1a1a;">
+  New Tutor Application
+</p>
+<p style="margin:0 0 24px 0;color:#555555;">
+  A new user has signed up and requested a tutor account on Nifty by Paragon.
+  Their account is currently set to <strong>student</strong> pending your review.
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="border:1px solid #f0e8e0;border-radius:6px;overflow:hidden;margin-bottom:24px;">
+  <tr style="background-color:#FFF7ED;">
+    <td style="padding:10px 16px;font-size:12px;font-weight:700;color:#888;
+               text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #f0e8e0;">
+      Applicant Details
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:16px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:6px 0;color:#555;font-size:14px;width:120px;">Name</td>
+          <td style="padding:6px 0;color:#1a1a1a;font-size:14px;font-weight:600;">{{ applicant_name }}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#555;font-size:14px;">Email</td>
+          <td style="padding:6px 0;font-size:14px;">
+            <a href="mailto:{{ applicant_email }}" style="color:#F97316;font-weight:600;text-decoration:none;">
+              {{ applicant_email }}
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#555;font-size:14px;">Phone</td>
+          <td style="padding:6px 0;color:#1a1a1a;font-size:14px;font-weight:600;">{{ phone }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0 0 8px 0;color:#555555;font-size:14px;">
+  To approve this application, update the user's role from <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">student</code>
+  to <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px;">tutor</code> in the admin panel and clear their
+  <em>tutor_application_pending</em> flag.
+</p>
+{% endblock %}

@@ -30,6 +30,8 @@ class UserOut(BaseModel):
     created_at: datetime
     verified: bool = False
     terms_accepted_at: Optional[datetime] = None
+    phone: Optional[str] = None
+    tutor_application_pending: bool = False
 
     class Config:
         from_attributes = True
@@ -52,6 +54,8 @@ class RegisterIndividualRequest(BaseModel):
     last_name: str = Field(default="", max_length=100)
     email: EmailStr
     password: str = Field(min_length=6)
+    apply_as_tutor: bool = False
+    phone: Optional[str] = Field(None, max_length=30)
 
 
 class LoginRequest(BaseModel):

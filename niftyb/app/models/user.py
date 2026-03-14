@@ -22,6 +22,8 @@ class User(Document):
     created_at = DateTimeField(default=lambda: datetime.now(timezone.utc))
     verified = BooleanField(default=False)
     terms_accepted_at = DateTimeField(default=None)
+    phone = StringField(max_length=30, default=None)
+    tutor_application_pending = BooleanField(default=False)
 
     # ── Queries ──────────────────────────────────────────────────────────────
 
@@ -67,4 +69,6 @@ class User(Document):
             "created_at": self.created_at.isoformat(),
             "verified": bool(self.verified),
             "terms_accepted_at": self.terms_accepted_at.isoformat() if self.terms_accepted_at else None,
+            "phone": self.phone or None,
+            "tutor_application_pending": bool(self.tutor_application_pending),
         }

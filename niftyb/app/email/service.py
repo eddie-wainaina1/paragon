@@ -125,3 +125,33 @@ async def send_reset_password_email(user, reset_url: str) -> None:
     """Send a password reset email with a 1-hour reset link."""
     html = _render("reset_password.html", user_name=user.name, reset_url=reset_url)
     _dispatch(user.email, user.name, "Reset your Nifty password", html)
+
+
+async def send_account_updated_email(to_name: str, to_email: str, changes: list[str]) -> None:
+    """Notify a user that their account details were changed.
+
+    ``to_email`` should be the address *before* any email change so the real
+    account owner always receives the notification.
+    """
+    html = _render(
+        "account_updated.html",
+        user_name=to_name,
+        changes=changes,
+    )
+    _dispatch(to_email, to_name, "Your Nifty account was updated", html)
+
+
+async def send_tutor_application_email(user, phone: str | None) -> None:
+    """Notify support of a new tutor application."""
+    html = _render(
+        "tutor_application.html",
+        applicant_name=user.name,
+        applicant_email=user.email,
+        phone=phone or "Not provided",
+    )
+    _dispatch(
+        "support@paragoneschool.com",
+        "Nifty Support",
+        f"New Tutor Application — {user.name}",
+        html,
+    )

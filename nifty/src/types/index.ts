@@ -30,6 +30,8 @@ export interface User {
   verified: boolean;
   created_at: string;
   terms_accepted_at: string | null;
+  phone?: string | null;
+  tutor_application_pending?: boolean;
 }
 
 export interface AssessmentQuestion {
@@ -163,6 +165,8 @@ export interface RegisterIndividualRequest {
   last_name?: string;
   email: string;
   password: string;
+  apply_as_tutor?: boolean;
+  phone?: string;
 }
 
 export interface UserCreate {

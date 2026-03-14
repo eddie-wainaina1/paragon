@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { Box, Alert } from '@mui/material';
 import { Outlet, Navigate } from 'react-router-dom';
 import Topbar from './Topbar';
 import Sidebar from './Sidebar';
@@ -15,6 +15,19 @@ export default function AppLayout() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {user?.tutor_application_pending && (
+        <Alert
+          severity="info"
+          sx={{
+            borderRadius: 0,
+            borderBottom: '1px solid',
+            borderColor: 'info.light',
+            '& .MuiAlert-message': { width: '100%', textAlign: 'center' },
+          }}
+        >
+          Your tutor account application is currently under review. We'll reach out to you soon to follow up.
+        </Alert>
+      )}
       <Topbar />
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar />
