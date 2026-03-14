@@ -12,7 +12,9 @@ _TMP_DIR = Path(__file__).parent.parent.parent / "tmp"
 
 
 def _render(template_name: str, **ctx) -> str:
+    from app.config import settings
     ctx.setdefault("year", datetime.now(timezone.utc).year)
+    ctx.setdefault("frontend_url", settings.frontend_url.rstrip("/"))
     return jinja_env.get_template(template_name).render(**ctx)
 
 

@@ -269,6 +269,13 @@ export default function Landing() {
           </Box>
         ))}
 
+        <Box
+          component="img"
+          src="/favicon.svg"
+          alt="Nifty logo"
+          sx={{ width: 72, height: 72, zIndex: 1, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))' }}
+        />
+
         <Typography
           component="h1"
           sx={{

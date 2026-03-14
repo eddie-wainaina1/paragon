@@ -98,20 +98,20 @@ export default function Topbar() {
       )}
       <Toolbar sx={{ px: { xs: 2, sm: 3 }, gap: 2 }}>
         {/* Logo */}
-        <Typography
-          variant="h6"
-          sx={{
-            fontFamily: "'Fredoka One', cursive",
-            color: 'primary.main',
-            letterSpacing: '0.01em',
-            flex: 1,
-          }}
-        >
-          <Box component="span" sx={{ color: 'primary.dark' }}>
-            Nifty
-          </Box>{' '}
-          by Paragon
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+          <Box component="img" src="/favicon.svg" alt="Nifty" sx={{ width: 28, height: 28 }} />
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: "'Fredoka One', cursive",
+              letterSpacing: '0.01em',
+              color: 'text.primary',
+              lineHeight: 1,
+            }}
+          >
+            <Box component="span" sx={{ color: 'primary.main' }}>Nifty</Box>{' '}by Paragon
+          </Typography>
+        </Box>
 
         {/* Notifications */}
         <Tooltip title="Notifications">
