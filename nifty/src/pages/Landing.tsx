@@ -1,9 +1,23 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Box, Typography, Button, Chip, Grid, Paper, keyframes } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  Chip,
+  Grid,
+  Paper,
+  keyframes,
+  IconButton,
+  Tooltip,
+  useTheme,
+} from '@mui/material';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '@/components/Auth/AuthModal';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
 import type { User } from '@/types';
 
 const floatAnim = keyframes`
@@ -145,6 +159,8 @@ export default function Landing() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const theme = useTheme();
+  const { mode, toggleMode } = useThemeStore();
 
   useEffect(() => {
     const verified = searchParams.get('verified');
@@ -185,6 +201,27 @@ export default function Landing() {
 
   return (
     <Box component="main" sx={{ minHeight: '100vh', fontFamily: "'Nunito', sans-serif" }}>
+
+      {/* ── Dark mode toggle ─────────────────────────────────────────────── */}
+      <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+        <IconButton
+          onClick={toggleMode}
+          size="small"
+          sx={{
+            position: 'fixed',
+            top: 16,
+            right: 16,
+            zIndex: 1200,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+            color: theme.palette.text.primary,
+            boxShadow: theme.shadows[2],
+            '&:hover': { background: theme.palette.action.hover },
+          }}
+        >
+          {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+        </IconButton>
+      </Tooltip>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <Box
@@ -368,7 +405,7 @@ export default function Landing() {
       <Box
         component="section"
         aria-label="Features"
-        sx={{ py: { xs: 8, md: 12 }, px: 3, background: '#fff' }}
+        sx={{ py: { xs: 8, md: 12 }, px: 3, background: theme.palette.background.paper }}
       >
         <Box sx={{ maxWidth: 900, mx: 'auto' }}>
           <Typography
@@ -376,7 +413,7 @@ export default function Landing() {
             sx={{
               fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
-              color: '#1a1a1a',
+              color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
             }}
@@ -385,7 +422,7 @@ export default function Landing() {
           </Typography>
           <Typography
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               textAlign: 'center',
               fontSize: '1.05rem',
               mb: 7,
@@ -406,7 +443,7 @@ export default function Landing() {
                   sx={{
                     p: 4,
                     height: '100%',
-                    border: '1.5px solid #f0f0f0',
+                    border: `1.5px solid ${theme.palette.divider}`,
                     borderRadius: 3,
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                     '&:hover': {
@@ -418,11 +455,11 @@ export default function Landing() {
                   <Typography sx={{ fontSize: '2.2rem', mb: 2, lineHeight: 1 }}>{f.icon}</Typography>
                   <Typography
                     component="h3"
-                    sx={{ fontWeight: 700, fontSize: '1.1rem', mb: 1, color: '#1a1a1a' }}
+                    sx={{ fontWeight: 700, fontSize: '1.1rem', mb: 1, color: theme.palette.text.primary }}
                   >
                     {f.title}
                   </Typography>
-                  <Typography sx={{ color: '#555', lineHeight: 1.7, fontSize: '0.95rem' }}>
+                  <Typography sx={{ color: theme.palette.text.secondary, lineHeight: 1.7, fontSize: '0.95rem' }}>
                     {f.description}
                   </Typography>
                 </Paper>
@@ -436,7 +473,7 @@ export default function Landing() {
       <Box
         component="section"
         aria-label="How Nifty works"
-        sx={{ py: { xs: 8, md: 12 }, px: 3, background: '#FFF7ED' }}
+        sx={{ py: { xs: 8, md: 12 }, px: 3, background: theme.palette.background.default }}
       >
         <Box sx={{ maxWidth: 900, mx: 'auto' }}>
           <Typography
@@ -444,7 +481,7 @@ export default function Landing() {
             sx={{
               fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
-              color: '#1a1a1a',
+              color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
             }}
@@ -453,7 +490,7 @@ export default function Landing() {
           </Typography>
           <Typography
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               textAlign: 'center',
               fontSize: '1.05rem',
               mb: 7,
@@ -490,11 +527,11 @@ export default function Landing() {
                   <Typography sx={{ fontSize: '2rem', mb: 1.5, lineHeight: 1 }}>{s.icon}</Typography>
                   <Typography
                     component="h3"
-                    sx={{ fontWeight: 700, fontSize: '1.05rem', mb: 1, color: '#1a1a1a' }}
+                    sx={{ fontWeight: 700, fontSize: '1.05rem', mb: 1, color: theme.palette.text.primary }}
                   >
                     {s.title}
                   </Typography>
-                  <Typography sx={{ color: '#555', lineHeight: 1.7, fontSize: '0.95rem' }}>
+                  <Typography sx={{ color: theme.palette.text.secondary, lineHeight: 1.7, fontSize: '0.95rem' }}>
                     {s.description}
                   </Typography>
                 </Box>
@@ -532,7 +569,7 @@ export default function Landing() {
       <Box
         component="section"
         aria-label="Technology topics"
-        sx={{ py: { xs: 8, md: 12 }, px: 3, background: '#fff' }}
+        sx={{ py: { xs: 8, md: 12 }, px: 3, background: theme.palette.background.paper }}
       >
         <Box sx={{ maxWidth: 860, mx: 'auto' }}>
           <Typography
@@ -540,7 +577,7 @@ export default function Landing() {
             sx={{
               fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
-              color: '#1a1a1a',
+              color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
             }}
@@ -549,7 +586,7 @@ export default function Landing() {
           </Typography>
           <Typography
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               textAlign: 'center',
               fontSize: '1.05rem',
               mb: 6,
@@ -570,7 +607,7 @@ export default function Landing() {
                   sx={{
                     p: 2.5,
                     textAlign: 'center',
-                    border: '1.5px solid #f0f0f0',
+                    border: `1.5px solid ${theme.palette.divider}`,
                     borderRadius: 3,
                     transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s',
                     '&:hover': {
@@ -581,7 +618,7 @@ export default function Landing() {
                   }}
                 >
                   <Typography sx={{ fontSize: '2rem', mb: 1, lineHeight: 1 }}>{t.icon}</Typography>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: '#1a1a1a', lineHeight: 1.4 }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: theme.palette.text.primary, lineHeight: 1.4 }}>
                     {t.label}
                   </Typography>
                 </Paper>
@@ -595,7 +632,7 @@ export default function Landing() {
       <Box
         component="section"
         aria-label="Who Nifty is for"
-        sx={{ py: { xs: 8, md: 12 }, px: 3, background: '#FFF7ED' }}
+        sx={{ py: { xs: 8, md: 12 }, px: 3, background: theme.palette.background.default }}
       >
         <Box sx={{ maxWidth: 960, mx: 'auto' }}>
           <Typography
@@ -603,7 +640,7 @@ export default function Landing() {
             sx={{
               fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
-              color: '#1a1a1a',
+              color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
             }}
@@ -612,7 +649,7 @@ export default function Landing() {
           </Typography>
           <Typography
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               textAlign: 'center',
               fontSize: '1.05rem',
               mb: 7,
@@ -636,9 +673,9 @@ export default function Landing() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    border: '1.5px solid #FDDCB0',
+                    border: `1.5px solid ${theme.palette.divider}`,
                     borderRadius: 3,
-                    background: '#fff',
+                    background: theme.palette.background.paper,
                     transition: 'transform 0.2s, box-shadow 0.2s',
                     '&:hover': {
                       transform: 'translateY(-4px)',
@@ -651,12 +688,12 @@ export default function Landing() {
                   </Typography>
                   <Typography
                     component="h3"
-                    sx={{ fontWeight: 700, fontSize: '1rem', mb: 1, color: '#1a1a1a' }}
+                    sx={{ fontWeight: 700, fontSize: '1rem', mb: 1, color: theme.palette.text.primary }}
                   >
                     {w.role}
                   </Typography>
                   <Typography
-                    sx={{ color: '#555', lineHeight: 1.7, fontSize: '0.9rem', flexGrow: 1, mb: 2.5 }}
+                    sx={{ color: theme.palette.text.secondary, lineHeight: 1.7, fontSize: '0.9rem', flexGrow: 1, mb: 2.5 }}
                   >
                     {w.description}
                   </Typography>
@@ -686,7 +723,7 @@ export default function Landing() {
       <Box
         component="section"
         aria-label="Frequently asked questions"
-        sx={{ py: { xs: 8, md: 12 }, px: 3, background: '#fff' }}
+        sx={{ py: { xs: 8, md: 12 }, px: 3, background: theme.palette.background.paper }}
       >
         <Box sx={{ maxWidth: 720, mx: 'auto' }}>
           <Typography
@@ -694,7 +731,7 @@ export default function Landing() {
             sx={{
               fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
-              color: '#1a1a1a',
+              color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
             }}
@@ -703,7 +740,7 @@ export default function Landing() {
           </Typography>
           <Typography
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               textAlign: 'center',
               fontSize: '1.05rem',
               mb: 7,
@@ -727,16 +764,16 @@ export default function Landing() {
                 elevation={0}
                 sx={{
                   p: 3,
-                  border: '1.5px solid #f0f0f0',
+                  border: `1.5px solid ${theme.palette.divider}`,
                   borderRadius: 3,
-                  '&:hover': { borderColor: '#FDDCB0' },
+                  '&:hover': { borderColor: theme.palette.primary.main },
                   transition: 'border-color 0.2s',
                 }}
               >
-                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 1, color: '#1a1a1a' }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 1, color: theme.palette.text.primary }}>
                   {faq.q}
                 </Typography>
-                <Typography sx={{ color: '#555', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                <Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.9rem', lineHeight: 1.7 }}>
                   {faq.a}
                 </Typography>
               </Paper>
