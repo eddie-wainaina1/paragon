@@ -156,6 +156,64 @@ export const ContentFileAccept: Record<string, string> = {
     pdf: "application/pdf",
 };
 
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+
+export const SubscriptionPlanConst = {
+  free: 'free' as const,
+  pro: 'pro' as const,
+  enterprise: 'enterprise' as const,
+
+  label: {
+    free: 'Free',
+    pro: 'Pro',
+    enterprise: 'Enterprise',
+  },
+
+  seatLimit: {
+    free: 50,
+    pro: 1000,
+    enterprise: -1, // unlimited
+  },
+
+  // Prices in KES
+  price: {
+    org_pro_monthly: 40000,
+    student_pro_monthly: 999,
+  },
+};
+
+export const SubscriptionPlan = SubscriptionPlanConst;
+
+export const SubscriptionStatusConst = {
+  active: 'active' as const,
+  cancelled: 'cancelled' as const,
+  expired: 'expired' as const,
+  enterprise_pending: 'enterprise_pending' as const,
+
+  label: {
+    active: 'Active',
+    cancelled: 'Cancelled',
+    expired: 'Expired',
+    enterprise_pending: 'Pending Approval',
+  },
+};
+
+export const SubscriptionStatus = SubscriptionStatusConst;
+
+export const SubscriptionStyle = {
+  plan: {
+    free: { bg: '#F1F5F9', color: '#475569' },
+    pro: { bg: '#DBEAFE', color: '#1E40AF' },
+    enterprise: { bg: '#EDE9FE', color: '#5B21B6' },
+  },
+  status: {
+    active: { bg: '#D1FAE5', color: '#065F46' },
+    cancelled: { bg: '#FEE2E2', color: '#991B1B' },
+    expired: { bg: '#FEF3C7', color: '#92400E' },
+    enterprise_pending: { bg: '#FEF3C7', color: '#92400E' },
+  },
+};
+
 /** Filter buttons shown in the Content Library. */
 export const ContentFilters = [
     { value: "all", label: "All", bg: "#F97316", color: "#1C1A17" },  // 6.0:1

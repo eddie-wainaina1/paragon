@@ -16,7 +16,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function getNavSections(role: RoleType): NavSection[] {
+function getNavSections(role: RoleType, orgId?: string): NavSection[] {
   const isStudent = role === 'student';
 
   const generalItems: NavItem[] = [
@@ -67,6 +67,41 @@ function getNavSections(role: RoleType): NavSection[] {
     sections.push({ section: 'Management', items: mgmtItems });
   }
 
+  // Finance and super_admin see the subscriptions overview
+  if (role === 'finance' || role === 'super_admin') {
+    sections.push({
+      section: 'Billing',
+      items: [
+        { id: 'subscriptions', icon: '💳', label: 'Subscriptions', path: '/app/subscriptions' },
+      ],
+    });
+  }
+
+  // org_admin can manage their own org's subscription
+  if (role === 'org_admin' && orgId) {
+    sections.push({
+      section: 'Billing',
+      items: [
+        {
+          id: 'org_subscription',
+          icon: '💳',
+          label: 'Subscription',
+          path: `/app/subscriptions/orgs/${orgId}`,
+        },
+      ],
+    });
+  }
+
+  // Individual students can manage their own subscription
+  if (role === 'student') {
+    sections.push({
+      section: 'Billing',
+      items: [
+        { id: 'my_subscription', icon: '💳', label: 'My Subscription', path: '/app/my-subscription' },
+      ],
+    });
+  }
+
   sections.push({
     section: 'Account',
     items: [{ id: 'profile', icon: '⚙️', label: 'Settings', path: '/app/profile' }],
@@ -84,7 +119,7 @@ export default function Sidebar() {
 
   if (!user) return null;
 
-  const sections = getNavSections(user.role);
+  const sections = getNavSections(user.role, user.org);
 
   const activeItemBg = isDark ? 'rgba(249,115,22,0.18)' : 'linear-gradient(135deg,#FFEDD5,#FEF3C7)';
   const hoverBg = isDark ? 'rgba(249,115,22,0.08)' : '#FFF7ED';

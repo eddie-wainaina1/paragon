@@ -12,7 +12,7 @@ from opentelemetry.instrumentation.redis import RedisInstrumentor
 from app.config import settings
 from app.db import connect_db, disconnect_db
 from app.telemetry import setup_telemetry
-from app.routers import auth, users, organizations, content, classes
+from app.routers import auth, users, organizations, content, classes, subscriptions
 from app.utils.security import hash_password
 from app.migrations import run_migrations
 
@@ -79,17 +79,28 @@ def _seed_platform() -> None:
 def _seed_academy() -> None:
     """Ensure the shared 'Nifty Academy' school org exists for individual sign-ups."""
     from app.models.organization import Organization
-    from app.constants import OrgType
+    from app.models.subscription import OrgSubscription
+    from app.constants import OrgType, SubscriptionPlan
 
     org = Organization.objects(slug="nifty-academy").first()
     if not org:
-        Organization(
+        org = Organization(
             name="Nifty Academy",
             slug="nifty-academy",
             type=OrgType.school,
             internal=False,
-        ).save()
+        )
+        org.save()
         logger.info("Academy org 'nifty-academy' created")
+
+    # Ensure academy has a subscription (idempotent)
+    if not OrgSubscription.objects(org=org).first():
+        OrgSubscription(
+            org=org,
+            plan=SubscriptionPlan.enterprise,
+            seat_limit=-1,  # unlimited — individual students
+        ).save()
+        logger.info("Academy subscription created (enterprise/unlimited)")
 
 
 @asynccontextmanager
@@ -121,6 +132,7 @@ app = FastAPI(
 _TERMS_EXEMPT_PREFIXES = (
     "/api/v1/auth/",
     "/api/v1/users/me/accept-terms",
+    "/api/v1/subscriptions/webhooks/",  # Paystack webhook — no user auth
     "/health",
     "/docs",
     "/redoc",
@@ -177,6 +189,7 @@ app.include_router(users.router,         prefix="/api/v1")
 app.include_router(organizations.router, prefix="/api/v1")
 app.include_router(content.router,       prefix="/api/v1")
 app.include_router(classes.router,       prefix="/api/v1")
+app.include_router(subscriptions.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])

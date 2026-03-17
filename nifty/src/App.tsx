@@ -15,6 +15,9 @@ import OrgDetail from '@/pages/OrgDetail';
 import Profile from '@/pages/Profile';
 import ResetPassword from '@/pages/ResetPassword';
 import Terms from '@/pages/Terms';
+import Subscriptions from '@/pages/Subscriptions';
+import OrgSubscription from '@/pages/OrgSubscription';
+import MySubscription from '@/pages/MySubscription';
 import { useAuthStore } from '@/store/authStore';
 
 function AuthRedirect() {
@@ -46,6 +49,9 @@ export default function App() {
         <Route path="users/:id" element={<UserDetail />} />
         <Route path="organizations" element={<Organizations />} />
         <Route path="organizations/:id" element={<OrgDetail />} />
+        <Route path="subscriptions" element={<Subscriptions />} />
+        <Route path="subscriptions/orgs/:orgId" element={<OrgSubscription />} />
+        <Route path="my-subscription" element={<MySubscription />} />
         <Route path="profile" element={<Profile />} />
       </Route>
       <Route path="/reset-password" element={<ResetPassword />} />

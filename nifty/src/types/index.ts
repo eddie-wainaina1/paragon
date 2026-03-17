@@ -141,6 +141,53 @@ export interface Class {
   content_items?: ClassContentItemSimple[];
 }
 
+export type SubscriptionPlan = 'free' | 'pro' | 'enterprise';
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'enterprise_pending';
+export type StudentSubKind = 'org_covered' | 'individual';
+export type BillingCycle = 'monthly' | 'annual';
+
+export interface OrgSubscription {
+  id: string;
+  org: string;
+  org_name: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  seat_limit: number;   // -1 = unlimited
+  seat_used: number;
+  billing_cycle: BillingCycle | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  paystack_subscription_code: string | null;
+  enterprise_note: string | null;
+  enterprise_applied_at: string | null;
+  managed_by: string | null;
+  managed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentSubscription {
+  id: string;
+  user: string;
+  user_name: string;
+  user_email: string;
+  kind: StudentSubKind;
+  plan: 'free' | 'pro';
+  status: SubscriptionStatus;
+  billing_cycle: BillingCycle | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  paystack_subscription_code: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaystackInitResponse {
+  authorization_url: string;
+  access_code: string;
+  reference: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;

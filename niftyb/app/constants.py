@@ -130,3 +130,42 @@ class OrgType(Constant):
     def values(cls) -> list[str]:
         """Return all org type values."""
         return [cls.platform, cls.school]
+
+
+class SubscriptionPlan(Constant):
+    free = "free"
+    pro = "pro"
+    enterprise = "enterprise"
+
+    # Student seat limits (-1 = unlimited)
+    seat_limits: dict = {"free": 50, "pro": 1000, "enterprise": -1}
+
+    # Prices in KES (Paystack uses smallest unit × 100, but KES has no subdivision;
+    # Paystack Kenya expects integer amount in lowest denomination, multiply by 100)
+    # KES 14,999 → 1,499,900 | KES 999 → 99,900
+    org_pro_amount: int = 1_499_900    # KES 14,999 /month
+    student_pro_amount: int = 99_900   # KES 999 /month
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [cls.free, cls.pro, cls.enterprise]
+
+
+class SubscriptionStatus(Constant):
+    active = "active"
+    cancelled = "cancelled"
+    expired = "expired"
+    enterprise_pending = "enterprise_pending"  # applied, awaiting Finance approval
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [cls.active, cls.cancelled, cls.expired, cls.enterprise_pending]
+
+
+class StudentSubKind(Constant):
+    org_covered = "org_covered"   # covered by org's subscription
+    individual = "individual"     # standalone student with own subscription
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [cls.org_covered, cls.individual]

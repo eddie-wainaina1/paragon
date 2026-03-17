@@ -11,11 +11,13 @@ import {
   Alert,
   Skeleton,
   Divider,
+  LinearProgress,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orgsApi } from '@/api/organizations';
+import { subscriptionsApi } from '@/api/subscriptions';
 import { useAuthStore } from '@/store/authStore';
-import { Role } from '@/constants';
+import { Role, SubscriptionStyle, SubscriptionPlan } from '@/constants';
 
 export default function OrgDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +34,13 @@ export default function OrgDetail() {
     queryKey: ['organization', id],
     queryFn: () => orgsApi.getById(id!),
     enabled: !!id,
+  });
+
+  const { data: sub } = useQuery({
+    queryKey: ['subscriptions', 'orgs', id],
+    queryFn: () => subscriptionsApi.getOrg(id!),
+    enabled: !!id,
+    retry: false,
   });
 
   function startEdit() {
@@ -120,6 +129,68 @@ export default function OrgDetail() {
           }}
         />
       </Box>
+
+      {/* Subscription summary card */}
+      {sub && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5">Subscription</Typography>
+              <Button
+                size="small"
+                sx={{ borderRadius: 50 }}
+                onClick={() => navigate(`/app/subscriptions/orgs/${id}`)}
+              >
+                Manage
+              </Button>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <Chip
+                label={SubscriptionPlan.label[sub.plan as keyof typeof SubscriptionPlan.label] ?? sub.plan}
+                sx={{
+                  ...SubscriptionStyle.plan[sub.plan as keyof typeof SubscriptionStyle.plan],
+                  fontWeight: 700,
+                }}
+              />
+              <Chip
+                label={
+                  { active: 'Active', cancelled: 'Cancelled', expired: 'Expired', enterprise_pending: 'Pending' }[sub.status] ?? sub.status
+                }
+                sx={{
+                  ...SubscriptionStyle.status[sub.status as keyof typeof SubscriptionStyle.status],
+                  fontWeight: 700,
+                }}
+              />
+              {sub.seat_limit !== -1 && (
+                <Box sx={{ flex: 1, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {sub.seat_used} / {sub.seat_limit} seats
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.min(100, (sub.seat_used / sub.seat_limit) * 100)}
+                    sx={{
+                      height: 6,
+                      borderRadius: 3,
+                      bgcolor: '#F1F5F9',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: '#F97316',
+                        borderRadius: 3,
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+              {sub.seat_limit === -1 && (
+                <Typography variant="body2" color="text.secondary">
+                  {sub.seat_used} students / unlimited seats
+                </Typography>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent sx={{ p: 3 }}>

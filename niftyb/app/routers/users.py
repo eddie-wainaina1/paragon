@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 
 from app.models.user import User
 from app.models.organization import Organization
+from app.models.subscription import OrgSubscription, StudentSubscription
 from datetime import datetime, timezone
 from app.schemas.user import UserCreate, UserUpdate, UserOut, AcceptTermsRequest
 from app.utils.security import hash_password, create_verification_token
@@ -15,7 +16,7 @@ from app.email import send_welcome_email, send_account_updated_email
 from app.config import settings
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
-from app.constants import Role
+from app.constants import Role, StudentSubKind
 
 router = APIRouter(prefix="/users", tags=["users"])
 logger = logging.getLogger(__name__)
@@ -147,6 +148,17 @@ async def create_user(
         # Enforce internal org ↔ role compatibility
         _check_role_org_compat(body.role, org)
 
+        # Seat enforcement: check org subscription capacity before adding a student
+        if body.role == Role.student:
+            org_sub = OrgSubscription.get_by_org(org)
+            if org_sub and not org_sub.has_available_seat():
+                from app.constants import SubscriptionPlan
+                limit = org_sub.seat_limit
+                raise HTTPException(
+                    status.HTTP_402_PAYMENT_REQUIRED,
+                    f"Seat limit reached ({limit} students). Upgrade your plan to add more students.",
+                )
+
         av = "".join(w[0] for w in body.name.split() if w)[:2].upper()
         user = User(
             name=body.name,
@@ -157,6 +169,20 @@ async def create_user(
             avatar=av,
         )
         user.save()
+
+        # Create StudentSubscription and update seat count
+        if body.role == Role.student:
+            org_sub = OrgSubscription.get_by_org(org)
+            # Determine if this is an individual student (nifty-academy) or org-covered
+            is_individual = org.slug == "nifty-academy"
+            StudentSubscription(
+                user=user,
+                kind=StudentSubKind.individual if is_individual else StudentSubKind.org_covered,
+            ).save()
+            if org_sub:
+                org_sub.seat_used = (org_sub.seat_used or 0) + 1
+                org_sub.touch()
+                org_sub.save()
 
         verification_token = create_verification_token(str(user.id))
         verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
@@ -252,6 +278,17 @@ async def delete_user(
         )
 
     org_id = str(user.org.id)
+    is_student = user.role == Role.student
+
+    # Clean up student subscription and decrement seat count before deleting user
+    if is_student:
+        org_sub = OrgSubscription.get_by_org(user.org)
+        StudentSubscription.objects(user=user).delete()
+        if org_sub and org_sub.seat_used > 0:
+            org_sub.seat_used -= 1
+            org_sub.touch()
+            org_sub.save()
+
     user.delete()
     await cache_delete(f"users:list:{org_id}")
     await cache_delete("users:list:all")

@@ -9,13 +9,14 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.content import Content
+from app.models.subscription import OrgSubscription
 from app.schemas.organization import OrgCreate, OrgUpdate, OrgOut
 from app.utils.deps import CurrentUser, require_roles
 from app.utils.security import hash_password, create_verification_token
 from app.email import send_invite_email
 from app.cache import cache_get, cache_set, cache_delete
 from app.telemetry import get_tracer
-from app.constants import Role, OrgType
+from app.constants import Role, OrgType, SubscriptionPlan
 from app.config import settings
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -66,6 +67,15 @@ async def create_org(body: OrgCreate):
 
     org = Organization(name=body.name, slug=slug, type=body.type, internal=body.internal)
     org.save()
+
+    # Auto-create a Free subscription for every new school org
+    if not body.internal:
+        OrgSubscription(
+            org=org,
+            plan=SubscriptionPlan.free,
+            seat_limit=SubscriptionPlan.seat_limits["free"],
+        ).save()
+
     await cache_delete("orgs:list:all")
     logger.info("Org created", extra={"org_id": str(org.id)})
 
@@ -125,9 +135,10 @@ async def delete_org(org_id: str, current_user: CurrentUser):
     if org.internal:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot delete an internal organization")
 
-    # Cascade-delete users and content belonging to this org
+    # Cascade-delete users, content, and subscription belonging to this org
     User.delete_by_org(org)
     Content.delete_by_org(org)
+    OrgSubscription.objects(org=org).delete()
     org.delete()
     await cache_delete("orgs:list:all")
     logger.info("Org deleted", extra={"org_id": org_id})

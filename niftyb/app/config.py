@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     # Frontend base URL — used to build verification redirect links
     frontend_url: str = "http://localhost:3000"
 
+    # Paystack payment gateway
+    paystack_secret_key: str = "sk_test_change_me"
+    paystack_public_key: str = "pk_test_change_me"
+    # Paystack plan codes — create these once in Paystack dashboard
+    paystack_org_pro_plan_code: str = ""      # monthly KES 14,999 org plan
+    paystack_student_pro_plan_code: str = ""  # monthly KES 999 student plan
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
