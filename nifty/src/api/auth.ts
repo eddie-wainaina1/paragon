@@ -14,6 +14,9 @@ export const authApi = {
   impersonate: (userId: string) =>
     apiClient.post<TokenResponse>(`/auth/impersonate/${userId}`).then((r) => r.data),
 
+  resendVerification: (email: string) =>
+    apiClient.post<{ message: string }>('/auth/resend-verification', { email }).then((r) => r.data),
+
   forgotPassword: (data: ForgotPasswordRequest) =>
     apiClient.post<{ message: string }>('/auth/forgot-password', data).then((r) => r.data),
 

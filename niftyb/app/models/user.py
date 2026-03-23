@@ -24,6 +24,7 @@ class User(Document):
     terms_accepted_at = DateTimeField(default=None)
     phone = StringField(max_length=30, default=None)
     tutor_application_pending = BooleanField(default=False)
+    must_change_password = BooleanField(default=False)
 
     # ── Queries ──────────────────────────────────────────────────────────────
 
@@ -71,4 +72,5 @@ class User(Document):
             "terms_accepted_at": self.terms_accepted_at.isoformat() if self.terms_accepted_at else None,
             "phone": self.phone or None,
             "tutor_application_pending": bool(self.tutor_application_pending),
+            "must_change_password": bool(self.must_change_password),
         }

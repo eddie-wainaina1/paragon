@@ -19,6 +19,9 @@ export const usersApi = {
 
   remove: (id: string) => apiClient.delete(`/users/${id}`),
 
+  resendInvite: (id: string, data: { name?: string; email?: string }) =>
+    apiClient.post<User>(`/users/${id}/resend-invite`, data).then((r) => r.data),
+
   acceptTerms: () =>
     apiClient.post<User>('/users/me/accept-terms', { accept: true }).then((r) => r.data),
 };

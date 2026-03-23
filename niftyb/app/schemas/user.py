@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     terms_accepted_at: Optional[datetime] = None
     phone: Optional[str] = None
     tutor_application_pending: bool = False
+    must_change_password: bool = False
 
     class Config:
         from_attributes = True

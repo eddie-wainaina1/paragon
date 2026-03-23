@@ -38,6 +38,9 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [indSuccess, setIndSuccess] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
 
   // Login form state
@@ -70,6 +73,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
       setRegisterSuccess(false);
       setIndSuccess(false);
       setForgotSuccess(false);
+      setNeedsVerification(false);
+      setResendSuccess(false);
       setEmail('');
       setPassword('');
       setOrgName('');
@@ -94,6 +99,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
     setRegisterSuccess(false);
     setIndSuccess(false);
     setForgotSuccess(false);
+    setNeedsVerification(false);
+    setResendSuccess(false);
   };
 
   const switchView = (v: ModalView) => {
@@ -106,6 +113,8 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
+    setResendSuccess(false);
     setLoading(true);
     try {
       const res = await authApi.login({ email, password });
@@ -116,8 +125,22 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         'Login failed';
       setError(msg);
+      if (msg.toLowerCase().includes('verify')) {
+        setNeedsVerification(true);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendSuccess(false);
+    try {
+      await authApi.resendVerification(email);
+      setResendSuccess(true);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -241,9 +264,31 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         <Divider sx={{ mb: 2 }} />
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+          <Alert severity="error" sx={{ mb: needsVerification ? 1 : 2, borderRadius: 2 }}>
             {error}
           </Alert>
+        )}
+
+        {needsVerification && view === 'login' && (
+          <Box sx={{ mb: 2 }}>
+            {resendSuccess ? (
+              <Alert severity="success" sx={{ borderRadius: 2 }}>
+                Verification email sent — check your inbox.
+              </Alert>
+            ) : (
+              <Button
+                size="small"
+                variant="outlined"
+                fullWidth
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                startIcon={resendLoading ? <CircularProgress size={14} color="inherit" /> : null}
+                sx={{ borderRadius: 50 }}
+              >
+                Resend verification email
+              </Button>
+            )}
+          </Box>
         )}
 
         {/* ── LOGIN ── */}

@@ -68,6 +68,7 @@ async def update_me(body: UserUpdate, current_user: CurrentUser):
     if body.password:
         changes.append("Your password was changed.")
         user.password_hash = hash_password(body.password)
+        user.must_change_password = False
     # Role changes are not permitted via self-update
 
     user.save()
@@ -167,6 +168,7 @@ async def create_user(
             role=body.role,
             org=org,
             avatar=av,
+            must_change_password=True,
         )
         user.save()
 
@@ -243,6 +245,7 @@ async def update_user(
     if body.password:
         changes.append("Your password was changed.")
         user.password_hash = hash_password(body.password)
+        user.must_change_password = True  # admin-set password is temporary
     if body.role:
         _check_role_org_compat(body.role, user.org)
         changes.append(f"Your account role was changed to \"{body.role}\".")
@@ -257,6 +260,52 @@ async def update_user(
     if changes:
         asyncio.create_task(send_account_updated_email(original_name, original_email, changes))
 
+    return _user_out(user)
+
+
+@router.post("/{user_id}/resend-invite", response_model=UserOut)
+async def resend_invite(
+    user_id: str,
+    body: UserUpdate,
+    current_user: User = Depends(require_roles(*Role.admin)),
+):
+    """
+    Resend the verification / welcome email for an unverified user.
+    Optionally update name and/or email before resending.
+    org_admin can only resend for users within their own org.
+    """
+    user = User.get_by_id(user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    if current_user.role == Role.org_admin and str(user.org.id) != str(current_user.org.id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot modify user from another org")
+
+    if user.verified:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "User has already verified their email")
+
+    if body.name:
+        user.name = body.name
+        user.avatar = "".join(w[0] for w in body.name.split() if w)[:2].upper()
+    if body.email:
+        if User.email_exists(body.email, exclude_id=user_id):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Email already taken")
+        user.email = body.email
+    if body.password:
+        user.password_hash = hash_password(body.password)
+
+    user.must_change_password = True
+
+    user.save()
+    await cache_delete(f"users:list:{user.org.id}")
+    await cache_delete("users:list:all")
+    await cache_delete(f"user:{user_id}")
+
+    verification_token = create_verification_token(str(user.id))
+    verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+    asyncio.create_task(send_welcome_email(user, verification_url))
+
+    logger.info("Invite resent", extra={"user_id": user_id, "by": str(current_user.id)})
     return _user_out(user)
 
 

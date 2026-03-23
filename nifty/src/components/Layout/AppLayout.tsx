@@ -5,6 +5,7 @@ import Topbar from './Topbar';
 import Sidebar from './Sidebar';
 import { useAuthStore } from '@/store/authStore';
 import TermsModal from '@/components/Terms/TermsModal';
+import ForcePasswordChangeModal from '@/components/Auth/ForcePasswordChangeModal';
 import { subscriptionsApi } from '@/api/subscriptions';
 
 export default function AppLayout() {
@@ -93,7 +94,8 @@ export default function AppLayout() {
           <Outlet />
         </Box>
       </Box>
-      <TermsModal open={!!user && !user.terms_accepted_at} />
+      <TermsModal open={!!user && !user.terms_accepted_at && !user.must_change_password} />
+      <ForcePasswordChangeModal open={!!user && !!user.must_change_password} />
     </Box>
   );
 }

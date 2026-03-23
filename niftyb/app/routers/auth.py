@@ -220,6 +220,21 @@ async def forgot_password(body: ForgotPasswordRequest):
     return {"message": "If an account with that email exists, a reset link has been sent."}
 
 
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+async def resend_verification(body: ForgotPasswordRequest):
+    """
+    Resend the email verification link.
+    Always returns 200 regardless of whether the email exists — prevents user enumeration.
+    Only sends if the account exists and is not yet verified.
+    """
+    user = User.get_by_email(body.email)
+    if user and not user.verified:
+        verification_token = create_verification_token(str(user.id))
+        verification_url = f"{settings.frontend_url}/api/v1/auth/verify-email?token={verification_token}"
+        asyncio.create_task(send_welcome_email(user, verification_url))
+    return {"message": "If an unverified account with that email exists, a new verification link has been sent."}
+
+
 @router.post("/reset-password", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 async def reset_password(body: ResetPasswordRequest):
     """Consume a password-reset JWT, update the user's password, and return a session token."""

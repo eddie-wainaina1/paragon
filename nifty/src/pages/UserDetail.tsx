@@ -16,6 +16,10 @@ import {
   Alert,
   Skeleton,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/api/users';
@@ -37,6 +41,13 @@ export default function UserDetail() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<RoleType>('student');
   const [error, setError] = useState('');
+
+  const [inviteDialog, setInviteDialog] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSent, setInviteSent] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['user', id],
@@ -81,6 +92,39 @@ export default function UserDetail() {
       setError(msg);
     },
   });
+
+  const resendMutation = useMutation({
+    mutationFn: () => {
+      const payload: { name?: string; email?: string; password?: string } = {};
+      if (inviteName !== user?.name) payload.name = inviteName;
+      if (inviteEmail !== user?.email) payload.email = inviteEmail;
+      if (invitePassword) payload.password = invitePassword;
+      return usersApi.resendInvite(id!, payload);
+    },
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['user', id] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setInviteSent(true);
+      setInviteError('');
+      // Update displayed data optimistically via query cache
+      queryClient.setQueryData(['user', id], updated);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Failed to resend invite';
+      setInviteError(msg);
+    },
+  });
+
+  function openInviteDialog() {
+    setInviteName(user!.name);
+    setInviteEmail(user!.email);
+    setInvitePassword('');
+    setInviteError('');
+    setInviteSent(false);
+    setInviteDialog(true);
+  }
 
   if (isLoading) {
     return (
@@ -131,6 +175,11 @@ export default function UserDetail() {
         <Chip label={Role.to_dict()[user.role]} sx={{ background: rc.bg, color: rc.color, fontWeight: 700 }} />
         {!user.verified && (
           <Chip label="Unverified" size="small" color="warning" />
+        )}
+        {!user.verified && canEdit && (
+          <Button variant="outlined" size="small" onClick={openInviteDialog} sx={{ borderRadius: 50 }}>
+            Resend Invite
+          </Button>
         )}
       </Box>
 
@@ -242,6 +291,73 @@ export default function UserDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Resend Invite dialog */}
+      <Dialog open={inviteDialog} onClose={() => !resendMutation.isPending && setInviteDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Resend Invite</DialogTitle>
+        <DialogContent>
+          {inviteSent ? (
+            <Alert severity="success" sx={{ mt: 1, borderRadius: 2 }}>
+              Invite sent to {inviteEmail}.
+            </Alert>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Update details if needed, then resend the verification email.
+              </Typography>
+              {inviteError && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>{inviteError}</Alert>
+              )}
+              <TextField
+                label="Full Name"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="Email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                label="New Password (optional)"
+                type="password"
+                value={invitePassword}
+                onChange={(e) => setInvitePassword(e.target.value)}
+                size="small"
+                fullWidth
+                helperText="Leave blank to keep the existing password"
+                slotProps={{ htmlInput: { minLength: 6 } }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          {inviteSent ? (
+            <Button onClick={() => setInviteDialog(false)} variant="contained" sx={{ borderRadius: 50 }}>
+              Done
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => setInviteDialog(false)} disabled={resendMutation.isPending} sx={{ borderRadius: 50 }}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => resendMutation.mutate()}
+                disabled={resendMutation.isPending}
+                sx={{ borderRadius: 50 }}
+              >
+                Send Invite
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

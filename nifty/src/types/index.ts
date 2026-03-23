@@ -32,6 +32,7 @@ export interface User {
   terms_accepted_at: string | null;
   phone?: string | null;
   tutor_application_pending?: boolean;
+  must_change_password?: boolean;
 }
 
 export interface AssessmentQuestion {
