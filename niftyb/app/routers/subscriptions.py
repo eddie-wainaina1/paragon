@@ -5,14 +5,13 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from app.cache import cache_delete
 from app.config import settings
 from app.constants import Role, SubscriptionPlan, SubscriptionStatus, StudentSubKind
 from app.models.organization import Organization
 from app.models.subscription import OrgSubscription, StudentSubscription
-from app.models.user import User
 from app.schemas.subscription import (
     OrgEnterpriseApplyRequest,
+    OrgEnterpriseApproveRequest,
     OrgSubscriptionManualUpdate,
     OrgSubscriptionOut,
     OrgUpgradeRequest,
@@ -118,6 +117,22 @@ async def upgrade_org_to_pro(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Already on Pro plan")
 
     plan_code = settings.paystack_org_pro_plan_code
+    if settings.is_dev:
+        # Dev: activate Pro immediately and redirect straight to callback
+        sub.plan = SubscriptionPlan.pro
+        sub.status = SubscriptionStatus.active
+        sub.seat_limit = SubscriptionPlan.seat_limits["pro"]
+        sub.billing_cycle = body.billing_cycle
+        sub.current_period_start = datetime.now(timezone.utc)
+        sub.touch()
+        sub.save()
+        logger.info("Org upgraded to Pro (dev bypass)", extra={"org_id": org_id})
+        return PaystackInitResponse(
+            authorization_url=body.callback_url,
+            access_code="dev",
+            reference="dev",
+        )
+
     if not plan_code:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -220,6 +235,52 @@ async def apply_for_enterprise(
     sub.touch()
     sub.save()
     logger.info("Enterprise application submitted", extra={"org_id": org_id})
+    return _org_sub_out(sub)
+
+
+@router.post("/orgs/{org_id}/approve-enterprise", response_model=OrgSubscriptionOut)
+async def approve_enterprise(
+    org_id: str,
+    body: OrgEnterpriseApproveRequest,
+    current_user: CurrentUser,
+):
+    """
+    Finance/SuperAdmin: approve a pending enterprise application.
+    Sets the org to Enterprise plan, active status, unlimited seats,
+    and a validity window of *validity_days* starting from now.
+    """
+    if current_user.role not in _FINANCE_ADMIN:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
+
+    _get_org_or_404(org_id)
+    sub = _get_org_sub_or_404(org_id)
+
+    if sub.status != SubscriptionStatus.enterprise_pending:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No pending enterprise application for this organization",
+        )
+
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+
+    sub.plan = SubscriptionPlan.enterprise
+    sub.status = SubscriptionStatus.active
+    sub.seat_limit = -1  # unlimited
+    sub.billing_cycle = None
+    sub.current_period_start = now
+    sub.current_period_end = now + timedelta(days=body.validity_days)
+    if body.note is not None:
+        sub.enterprise_note = body.note
+    sub.managed_by = str(current_user.id)
+    sub.managed_at = now
+    sub.touch()
+    sub.save()
+
+    logger.info(
+        "Enterprise approved",
+        extra={"org_id": org_id, "validity_days": body.validity_days, "by": str(current_user.id)},
+    )
     return _org_sub_out(sub)
 
 
@@ -341,6 +402,23 @@ async def upgrade_student_subscription(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Already on Pro plan")
 
     plan_code = settings.paystack_student_pro_plan_code
+    if settings.is_dev:
+        # Dev: activate Pro immediately and redirect straight to callback
+        if not sub:
+            sub = StudentSubscription(user=current_user, kind=StudentSubKind.individual)
+        sub.plan = "pro"
+        sub.status = SubscriptionStatus.active
+        sub.billing_cycle = body.billing_cycle
+        sub.current_period_start = datetime.now(timezone.utc)
+        sub.touch()
+        sub.save()
+        logger.info("Student upgraded to Pro (dev bypass)", extra={"user_id": str(current_user.id)})
+        return PaystackInitResponse(
+            authorization_url=body.callback_url,
+            access_code="dev",
+            reference="dev",
+        )
+
     if not plan_code:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

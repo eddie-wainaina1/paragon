@@ -39,6 +39,12 @@ class OrgEnterpriseApplyRequest(BaseModel):
     note: Optional[str] = Field(None, max_length=2000)
 
 
+class OrgEnterpriseApproveRequest(BaseModel):
+    """Finance/SuperAdmin approval of an enterprise application."""
+    validity_days: int = Field(..., ge=1, description="Number of days the enterprise plan is valid")
+    note: Optional[str] = Field(None, max_length=2000)
+
+
 class OrgSubscriptionManualUpdate(BaseModel):
     """Finance/SuperAdmin manual override."""
     plan: Optional[str] = Field(None, pattern=SubscriptionPlan.pattern())

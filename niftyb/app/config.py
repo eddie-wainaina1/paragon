@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     paystack_student_pro_plan_code: str = ""  # monthly KES 999 student plan
 
     @property
+    def is_dev(self) -> bool:
+        return self.app_env in ["local", "development"]
+
+    @property
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
 

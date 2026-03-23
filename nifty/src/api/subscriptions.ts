@@ -31,6 +31,11 @@ export const subscriptionsApi = {
       .post<OrgSubscription>(`/subscriptions/orgs/${orgId}/apply-enterprise`, data)
       .then((r) => r.data),
 
+  approveEnterprise: (orgId: string, data: { validity_days: number; note?: string }) =>
+    apiClient
+      .post<OrgSubscription>(`/subscriptions/orgs/${orgId}/approve-enterprise`, data)
+      .then((r) => r.data),
+
   cancelOrg: (orgId: string) =>
     apiClient
       .post<OrgSubscription>(`/subscriptions/orgs/${orgId}/cancel`)

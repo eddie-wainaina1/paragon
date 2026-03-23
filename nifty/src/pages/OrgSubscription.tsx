@@ -82,6 +82,9 @@ export default function OrgSubscription() {
   const [verifying, setVerifying] = useState(false);
   const [enterpriseDialog, setEnterpriseDialog] = useState(false);
   const [enterpriseNote, setEnterpriseNote] = useState('');
+  const [approveDialog, setApproveDialog] = useState(false);
+  const [approveValidityDays, setApproveValidityDays] = useState('365');
+  const [approveNote, setApproveNote] = useState('');
   const [cancelDialog, setCancelDialog] = useState(false);
   const [manualDialog, setManualDialog] = useState(false);
   const [manualPlan, setManualPlan] = useState('');
@@ -153,6 +156,24 @@ export default function OrgSubscription() {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         'Failed to submit application';
+      setError(msg);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () =>
+      subscriptionsApi.approveEnterprise(orgId!, {
+        validity_days: parseInt(approveValidityDays, 10),
+        ...(approveNote && { note: approveNote }),
+      }),
+    onSuccess: () => {
+      setApproveDialog(false);
+      invalidate();
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        'Approval failed';
       setError(msg);
     },
   });
@@ -251,9 +272,41 @@ export default function OrgSubscription() {
         </Alert>
       )}
 
-      {sub.status === 'enterprise_pending' && (
+      {sub.status === 'enterprise_pending' && !isFinanceAdmin && (
         <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
           Enterprise application submitted — our team will reach out shortly.
+        </Alert>
+      )}
+
+      {sub.status === 'enterprise_pending' && isFinanceAdmin && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2, borderRadius: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              variant="outlined"
+              sx={{ borderRadius: 50, whiteSpace: 'nowrap' }}
+              onClick={() => {
+                setApproveNote(sub.enterprise_note ?? '');
+                setApproveValidityDays('365');
+                setApproveDialog(true);
+              }}
+            >
+              Approve
+            </Button>
+          }
+        >
+          <strong>{sub.org_name}</strong> has a pending enterprise application
+          {sub.enterprise_applied_at && (
+            <> — submitted {new Date(sub.enterprise_applied_at).toLocaleDateString()}</>
+          )}
+          {sub.enterprise_note && (
+            <Box component="blockquote" sx={{ mt: 0.5, ml: 0, pl: 1.5, borderLeft: '3px solid', borderColor: 'warning.main', fontStyle: 'italic', color: 'text.secondary', fontSize: '0.875rem' }}>
+              "{sub.enterprise_note}"
+            </Box>
+          )}
         </Alert>
       )}
 
@@ -377,6 +430,49 @@ export default function OrgSubscription() {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Approve Enterprise dialog (Finance/SuperAdmin) */}
+      <Dialog open={approveDialog} onClose={() => setApproveDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Approve Enterprise Subscription</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Validity (days)"
+              type="number"
+              value={approveValidityDays}
+              onChange={(e) => setApproveValidityDays(e.target.value)}
+              slotProps={{ htmlInput: { min: 1 } }}
+              helperText={
+                approveValidityDays && parseInt(approveValidityDays, 10) > 0
+                  ? `Expires ${new Date(Date.now() + parseInt(approveValidityDays, 10) * 86400000).toLocaleDateString()}`
+                  : 'Enter number of days'
+              }
+              fullWidth
+            />
+            <TextField
+              label="Internal note (optional)"
+              multiline
+              rows={3}
+              value={approveNote}
+              onChange={(e) => setApproveNote(e.target.value)}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setApproveDialog(false)} sx={{ borderRadius: 50 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            sx={{ borderRadius: 50 }}
+            onClick={() => approveMutation.mutate()}
+            disabled={approveMutation.isPending || !approveValidityDays || parseInt(approveValidityDays, 10) < 1}
+          >
+            Approve Enterprise
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Enterprise application dialog */}
       <Dialog open={enterpriseDialog} onClose={() => setEnterpriseDialog(false)} maxWidth="sm" fullWidth>
