@@ -104,7 +104,7 @@ export default function Classes() {
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         {isStudent
-          ? 'Browse and subscribe to classes to access their content'
+          ? 'Browse and enroll in classes to access their content'
           : 'Manage classes and unlock content for students'}
       </Typography>
 
@@ -150,7 +150,7 @@ export default function Classes() {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       <span>🌍 Global class</span>
                       <Typography variant="caption" color="text.secondary">
-                        (any student can subscribe)
+                        (any student can enroll)
                       </Typography>
                     </Box>
                   }
@@ -284,7 +284,7 @@ export default function Classes() {
                               onClick={() => unsubscribeMutation.mutate(c.id)}
                               disabled={unsubscribeMutation.isPending}
                             >
-                              Unsubscribe
+                              Leave
                             </Button>
                           ) : (
                             <Button
@@ -295,7 +295,7 @@ export default function Classes() {
                               onClick={() => subscribeMutation.mutate(c.id)}
                               disabled={subscribeMutation.isPending}
                             >
-                              Subscribe
+                              Enroll
                             </Button>
                           )
                         )}
@@ -419,7 +419,7 @@ export default function Classes() {
                           onClick={() => subscribeMutation.mutate(c.id)}
                           disabled={subscribeMutation.isPending}
                         >
-                          Subscribe
+                          Enroll
                         </Button>
                       </TableCell>
                     </TableRow>

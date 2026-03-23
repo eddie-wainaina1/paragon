@@ -237,6 +237,11 @@ export default function ClassDetail() {
     },
   });
 
+  const enrollMutation = useMutation({
+    mutationFn: () => classesApi.subscribe(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['classes', id] }),
+  });
+
   // Content already in the class (to exclude from picker)
   const classContentIds = new Set(classContent.map((c: ClassContentDetail) => c.content_id));
   const availableToAdd = allContent.filter((c: Content) => !classContentIds.has(c.id));
@@ -335,7 +340,20 @@ export default function ClassDetail() {
             </Typography>
           </Box>
           {isStudent && !isEnrolled && (
-            <Alert severity="info" sx={{ mt: 1.5, borderRadius: 2 }}>
+            <Alert
+              severity="info"
+              sx={{ mt: 1.5, borderRadius: 2 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  disabled={enrollMutation.isPending}
+                  onClick={() => enrollMutation.mutate()}
+                >
+                  {enrollMutation.isPending ? 'Enrolling…' : 'Enroll'}
+                </Button>
+              }
+            >
               You are not enrolled — this is a preview of the class content.
             </Alert>
           )}
