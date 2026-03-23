@@ -119,11 +119,14 @@ async def upgrade_org_to_pro(
     plan_code = settings.paystack_org_pro_plan_code
     if settings.is_dev:
         # Dev: activate Pro immediately and redirect straight to callback
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
         sub.plan = SubscriptionPlan.pro
         sub.status = SubscriptionStatus.active
         sub.seat_limit = SubscriptionPlan.seat_limits["pro"]
         sub.billing_cycle = body.billing_cycle
-        sub.current_period_start = datetime.now(timezone.utc)
+        sub.current_period_start = now
+        sub.current_period_end = now + timedelta(days=30 if body.billing_cycle == "monthly" else 365)
         sub.touch()
         sub.save()
         logger.info("Org upgraded to Pro (dev bypass)", extra={"org_id": org_id})
@@ -404,12 +407,15 @@ async def upgrade_student_subscription(
     plan_code = settings.paystack_student_pro_plan_code
     if settings.is_dev:
         # Dev: activate Pro immediately and redirect straight to callback
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
         if not sub:
             sub = StudentSubscription(user=current_user, kind=StudentSubKind.individual)
         sub.plan = "pro"
         sub.status = SubscriptionStatus.active
         sub.billing_cycle = body.billing_cycle
-        sub.current_period_start = datetime.now(timezone.utc)
+        sub.current_period_start = now
+        sub.current_period_end = now + timedelta(days=30 if body.billing_cycle == "monthly" else 365)
         sub.touch()
         sub.save()
         logger.info("Student upgraded to Pro (dev bypass)", extra={"user_id": str(current_user.id)})
