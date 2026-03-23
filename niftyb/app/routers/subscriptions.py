@@ -325,21 +325,19 @@ async def upgrade_student_subscription(
     body: StudentUpgradeRequest, current_user: CurrentUser
 ):
     """
-    Initiate a Paystack payment for an individual student Pro upgrade.
+    Initiate a Paystack payment for an individual student Pro subscription.
     Only applicable for students with kind='individual'.
     """
     if current_user.role != Role.student:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Students only")
 
     sub = StudentSubscription.get_by_user(current_user)
-    if not sub:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Subscription not found")
-    if sub.kind != StudentSubKind.individual:
+    if sub and sub.kind != StudentSubKind.individual:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Your access is covered by your organization's subscription",
         )
-    if sub.plan == "pro" and sub.status == SubscriptionStatus.active:
+    if sub and sub.plan == "pro" and sub.status == SubscriptionStatus.active:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Already on Pro plan")
 
     plan_code = settings.paystack_student_pro_plan_code
@@ -379,8 +377,6 @@ async def verify_student_upgrade(reference: str, current_user: CurrentUser):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Students only")
 
     sub = StudentSubscription.get_by_user(current_user)
-    if not sub:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Subscription not found")
 
     try:
         tx = await paystack_svc.verify_transaction(reference)
@@ -390,6 +386,9 @@ async def verify_student_upgrade(reference: str, current_user: CurrentUser):
 
     if tx.get("status") != "success":
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "Payment not completed")
+
+    if not sub:
+        sub = StudentSubscription(user=current_user, kind=StudentSubKind.individual)
 
     sub.plan = "pro"
     sub.status = SubscriptionStatus.active

@@ -121,7 +121,44 @@ export default function MySubscription() {
   }
 
   if (!sub) {
-    return <Alert severity="info">No subscription found for your account.</Alert>;
+    return (
+      <Box sx={{ maxWidth: 420 }}>
+        <Typography variant="h4" sx={{ mb: 1 }}>Subscribe to Nifty</Typography>
+        <Typography color="text.secondary" sx={{ mb: 3 }}>
+          Get access to all global content across the platform
+        </Typography>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+
+        <Card sx={{ border: '2px solid #DBEAFE', background: '#F0F7FF' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography fontWeight={700}>Pro</Typography>
+              <PlanChip plan="pro" />
+            </Box>
+            <Typography variant="h4" fontWeight={800} sx={{ mb: 0.5 }}>KES 999</Typography>
+            <Typography variant="caption" color="text.secondary">per month</Typography>
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+              Access to all global content across the platform
+            </Typography>
+            <Button
+              fullWidth
+              variant="contained"
+              sx={{ borderRadius: 50 }}
+              onClick={() => upgradeMutation.mutate()}
+              disabled={upgradeMutation.isPending}
+            >
+              Subscribe — KES 999/mo
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
   }
 
   const isOrgCovered = sub.kind === 'org_covered';
@@ -185,46 +222,28 @@ export default function MySubscription() {
         </CardContent>
       </Card>
 
-      {/* Plans comparison (only for individual students) */}
+      {/* Plan info (only for individual students) */}
       {!isOrgCovered && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
-          {/* Free tier */}
-          <Card sx={{ border: sub.plan === 'free' ? '2px solid #F97316' : '2px solid transparent' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography fontWeight={700}>Free</Typography>
-                <PlanChip plan="free" />
-              </Box>
-              <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>KES 0</Typography>
-              <Typography variant="caption" color="text.secondary">per month</Typography>
-              <Divider sx={{ my: 1.5 }} />
-              <Typography variant="body2" color="text.secondary">
-                Access to org-assigned content only
-              </Typography>
-            </CardContent>
-          </Card>
-
-          {/* Pro tier */}
-          <Card
-            sx={{
-              border: isProActive ? '2px solid #1E40AF' : '2px solid #DBEAFE',
-              background: '#F0F7FF',
-            }}
-          >
-            <CardContent sx={{ p: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography fontWeight={700}>Pro</Typography>
-                <PlanChip plan="pro" />
-              </Box>
-              <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>KES 999</Typography>
-              <Typography variant="caption" color="text.secondary">per month</Typography>
-              <Divider sx={{ my: 1.5 }} />
-              <Typography variant="body2" color="text.secondary">
-                Access to all global content across the platform
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
+        <Card
+          sx={{
+            mb: 2,
+            border: '2px solid #DBEAFE',
+            background: '#F0F7FF',
+          }}
+        >
+          <CardContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography fontWeight={700}>Pro</Typography>
+              <PlanChip plan="pro" />
+            </Box>
+            <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>KES 999</Typography>
+            <Typography variant="caption" color="text.secondary">per month</Typography>
+            <Divider sx={{ my: 1.5 }} />
+            <Typography variant="body2" color="text.secondary">
+              Access to all global content across the platform
+            </Typography>
+          </CardContent>
+        </Card>
       )}
 
       {/* Action buttons (individual only) */}
