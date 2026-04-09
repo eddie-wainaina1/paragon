@@ -103,8 +103,8 @@ export default function Topbar() {
           <Typography
             variant="h6"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
-              letterSpacing: '0.01em',
+              fontWeight: 700,
+              letterSpacing: '-0.01em',
               color: 'text.primary',
               lineHeight: 1,
             }}

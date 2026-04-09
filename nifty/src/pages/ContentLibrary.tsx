@@ -28,7 +28,7 @@ export default function ContentLibrary() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        📚 Content Library
+        Content Library
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2.5 }}>
         Browse all available learning content
@@ -74,7 +74,6 @@ export default function ContentLibrary() {
         {!isLoading && contentList.length === 0 && (
           <Grid size={{ xs: 12 }}>
             <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-              <Typography sx={{ fontSize: '3.5rem', mb: 1 }}>🔍</Typography>
               <Typography>No {filter !== 'all' ? filter : ''} content found.</Typography>
             </Box>
           </Grid>

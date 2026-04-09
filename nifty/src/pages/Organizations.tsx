@@ -87,7 +87,7 @@ export default function Organizations() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        🏫 Organizations
+        Organizations
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Manage all registered organizations on the platform
@@ -194,8 +194,8 @@ export default function Organizations() {
                         }}
                       />
                     </TableCell>
-                    <TableCell>👥 {userCount}</TableCell>
-                    <TableCell>📚 {contentCount}</TableCell>
+                    <TableCell>{userCount}</TableCell>
+                    <TableCell>{contentCount}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       {!isPlatform && (
                         <Button

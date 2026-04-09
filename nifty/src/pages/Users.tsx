@@ -120,7 +120,7 @@ export default function Users() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        👥 User Management
+        User Management
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Manage {users.length} users

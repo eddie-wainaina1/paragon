@@ -33,7 +33,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { classesApi } from '@/api/classes';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
-import { ContentEmoji, Role } from '@/constants';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import { Role } from '@/constants';
 import ContentViewDialog from '@/components/Content/ContentViewDialog';
 import type { ClassContentDetail, Content } from '@/types';
 
@@ -324,7 +326,7 @@ export default function ClassDetail() {
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ mb: 0.5 }}>
-            🎓 {cls.name}
+            {cls.name}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {cls.grade && (
@@ -377,7 +379,7 @@ export default function ClassDetail() {
       </Box>
 
       {/* Content section */}
-      <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem', mb: 1.5 }}>
+      <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, mb: 1.5 }}>
         Class Content
       </Typography>
 
@@ -408,7 +410,6 @@ export default function ClassDetail() {
               <TableRow>
                 <TableCell colSpan={7}>
                   <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                    <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>📭</Typography>
                     <Typography>No content in this class yet.</Typography>
                     {canManage && (
                       <Typography variant="body2" sx={{ mt: 0.5 }}>
@@ -446,17 +447,17 @@ export default function ClassDetail() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {isStudent && !c.accessible && (
                           <Tooltip title="Complete prior content first">
-                            <span>🔒</span>
+                            <LockOutlinedIcon fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0 }} />
                           </Tooltip>
                         )}
                         {isStudent && c.completed && (
                           <Tooltip title="Completed">
-                            <span>✅</span>
+                            <CheckCircleOutlinedIcon fontSize="small" sx={{ color: 'success.main', flexShrink: 0 }} />
                           </Tooltip>
                         )}
                         <Box>
                           <Typography fontWeight={700}>
-                            {c.emoji || ContentEmoji.to_dict()[c.type] || '📄'} {c.title}
+                            {c.title}
                           </Typography>
                           {c.body && (
                             <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 280 }}>
@@ -615,7 +616,7 @@ export default function ClassDetail() {
       {canViewProgress && (
         <>
           <Divider sx={{ mb: 3 }} />
-          <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem', mb: 1.5 }}>
+          <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, mb: 1.5 }}>
             Students ({cls.student_count})
           </Typography>
 
@@ -743,7 +744,7 @@ export default function ClassDetail() {
                 >
                   {availableToAdd.map((c: Content) => (
                     <MenuItem key={c.id} value={c.id}>
-                      {c.emoji || ContentEmoji.to_dict()[c.type] || '📄'} {c.title}
+                      {c.title}
                       {c.subject && ` — ${c.subject}`}
                       {c.scope === 'global' && (
                         <Chip label="global" size="small" sx={{ ml: 1 }} />

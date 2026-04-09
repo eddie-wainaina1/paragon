@@ -7,56 +7,55 @@ import {
   Chip,
   Grid,
   Paper,
-  keyframes,
   IconButton,
   Tooltip,
   useTheme,
 } from '@mui/material';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
+import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
+import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
+import SportsEsportsOutlinedIcon from '@mui/icons-material/SportsEsportsOutlined';
+import WebOutlinedIcon from '@mui/icons-material/WebOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthModal from '@/components/Auth/AuthModal';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import type { User } from '@/types';
 
-const floatAnim = keyframes`
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%       { transform: translateY(-16px) rotate(8deg); }
-`;
-
-const FLOATING_ICONS = ['💻', '🤖', '🔬', '🎮', '⚡', '🌐'];
-const FLOATING_POSITIONS: Array<{ top?: string; bottom?: string; left?: string; right?: string }> = [
-  { top: '8%', left: '6%' },
-  { top: '15%', right: '8%' },
-  { bottom: '20%', left: '10%' },
-  { bottom: '10%', right: '12%' },
-  { top: '50%', left: '3%' },
-  { top: '40%', right: '4%' },
-];
-const ROLES = ['🏫 Organizations', '👩‍🏫 Teachers', '🎓 Students', '⭐ Tutors'];
+const ROLES = ['Organizations', 'Teachers', 'Students', 'Tutors'];
 
 const FEATURES = [
   {
-    icon: '📚',
+    icon: <LibraryBooksOutlinedIcon sx={{ fontSize: '2rem' }} />,
     title: 'Rich Content Library',
     description:
       'Upload and deliver videos, PDFs, audio, and text materials — all in one organised, searchable library your school can access anytime.',
   },
   {
-    icon: '🏫',
+    icon: <SchoolOutlinedIcon sx={{ fontSize: '2rem' }} />,
     title: 'Class Management',
     description:
       'Create classes, enrol students, and assign curated content. Keep your curriculum structured and your learners on track.',
   },
   {
-    icon: '👥',
+    icon: <GroupsOutlinedIcon sx={{ fontSize: '2rem' }} />,
     title: 'Role-Based Access',
     description:
       'Every user sees exactly what they need. Admins manage the school, teachers run classes, and students focus on learning.',
   },
   {
-    icon: '🔒',
+    icon: <SecurityOutlinedIcon sx={{ fontSize: '2rem' }} />,
     title: 'Secure & Scalable',
     description:
       'Organisation-level isolation, JWT authentication, and fine-grained permissions keep your data safe as you grow.',
@@ -66,21 +65,18 @@ const FEATURES = [
 const HOW_IT_WORKS = [
   {
     step: '01',
-    icon: '🏫',
     title: 'Register your school',
     description:
       'Sign up your institution in minutes. Add your admin account and invite teachers and students — no technical setup required.',
   },
   {
     step: '02',
-    icon: '📖',
     title: 'Build your curriculum',
     description:
       'Upload lesson videos, PDFs, and reading materials. Organise content into classes and assign it to the right learners.',
   },
   {
     step: '03',
-    icon: '🚀',
     title: 'Teach and learn',
     description:
       'Students access their class content on any device. Teachers track engagement. Admins keep everything running smoothly.',
@@ -88,19 +84,19 @@ const HOW_IT_WORKS = [
 ];
 
 const TOPICS = [
-  { icon: '💻', label: 'Programming & Coding' },
-  { icon: '🤖', label: 'Artificial Intelligence' },
-  { icon: '🔬', label: 'Robotics & Electronics' },
-  { icon: '🎮', label: 'Game Development' },
-  { icon: '🌐', label: 'Web & App Development' },
-  { icon: '🔒', label: 'Cybersecurity' },
-  { icon: '📊', label: 'Data & Analytics' },
-  { icon: '⚡', label: 'Digital Innovation' },
+  { icon: <CodeOutlinedIcon />, label: 'Programming & Coding' },
+  { icon: <SmartToyOutlinedIcon />, label: 'Artificial Intelligence' },
+  { icon: <MemoryOutlinedIcon />, label: 'Robotics & Electronics' },
+  { icon: <SportsEsportsOutlinedIcon />, label: 'Game Development' },
+  { icon: <WebOutlinedIcon />, label: 'Web & App Development' },
+  { icon: <SecurityOutlinedIcon />, label: 'Cybersecurity' },
+  { icon: <BarChartOutlinedIcon />, label: 'Data & Analytics' },
+  { icon: <BoltOutlinedIcon />, label: 'Digital Innovation' },
 ];
 
 const WHO_ITS_FOR = [
   {
-    emoji: '🏫',
+    icon: <BusinessOutlinedIcon sx={{ fontSize: '2.4rem' }} />,
     role: 'Schools & Organisations',
     description:
       'Onboard your institution in minutes. Manage teachers, students, and content from a single admin dashboard.',
@@ -108,7 +104,7 @@ const WHO_ITS_FOR = [
     tab: 'register' as const,
   },
   {
-    emoji: '👩‍🏫',
+    icon: <PersonOutlinedIcon sx={{ fontSize: '2.4rem' }} />,
     role: 'Teachers',
     description:
       'Build classes, hand-pick learning materials, and watch your students engage with the content you assign.',
@@ -116,7 +112,7 @@ const WHO_ITS_FOR = [
     tab: 'login' as const,
   },
   {
-    emoji: '🎓',
+    icon: <SchoolOutlinedIcon sx={{ fontSize: '2.4rem' }} />,
     role: 'Students',
     description:
       'Access your class materials whenever you need them — videos, readings, and more — all in one place.',
@@ -124,7 +120,7 @@ const WHO_ITS_FOR = [
     tab: 'login' as const,
   },
   {
-    emoji: '⭐',
+    icon: <StarBorderOutlinedIcon sx={{ fontSize: '2.4rem' }} />,
     role: 'Tutors',
     description:
       'Create and share high-quality content beyond the classroom. Apply to join as an individual tutor and reach learners across multiple organisations.',
@@ -200,7 +196,7 @@ export default function Landing() {
   };
 
   return (
-    <Box component="main" sx={{ minHeight: '100vh', fontFamily: "'Nunito', sans-serif" }}>
+    <Box component="main" sx={{ minHeight: '100vh' }}>
 
       {/* ── Dark mode toggle ─────────────────────────────────────────────── */}
       <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -251,24 +247,6 @@ export default function Landing() {
           },
         }}
       >
-        {FLOATING_ICONS.map((icon, i) => (
-          <Box
-            key={icon}
-            aria-hidden="true"
-            sx={{
-              position: 'absolute',
-              fontSize: '2rem',
-              opacity: 0.13,
-              animation: `${floatAnim} 6s ease-in-out infinite`,
-              animationDelay: `${i * 0.8}s`,
-              ...FLOATING_POSITIONS[i],
-              pointerEvents: 'none',
-            }}
-          >
-            {icon}
-          </Box>
-        ))}
-
         <Box
           component="img"
           src="/favicon.svg"
@@ -279,14 +257,14 @@ export default function Landing() {
         <Typography
           component="h1"
           sx={{
-            fontFamily: "'Fredoka One', cursive",
             fontSize: { xs: '2.6rem', md: '3.4rem' },
+            fontWeight: 700,
             color: '#fff',
             textAlign: 'center',
             lineHeight: 1.1,
             zIndex: 1,
             textShadow: '0 3px 12px rgba(0,0,0,0.25)',
-            letterSpacing: '0.02em',
+            letterSpacing: '-0.01em',
           }}
         >
           <Box component="span" sx={{ color: '#FDE68A' }}>
@@ -418,8 +396,8 @@ export default function Landing() {
           <Typography
             component="h2"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
+              fontWeight: 700,
               color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
@@ -459,7 +437,7 @@ export default function Landing() {
                     },
                   }}
                 >
-                  <Typography sx={{ fontSize: '2.2rem', mb: 2, lineHeight: 1 }}>{f.icon}</Typography>
+                  <Box sx={{ color: '#F97316', mb: 2, lineHeight: 1 }}>{f.icon}</Box>
                   <Typography
                     component="h3"
                     sx={{ fontWeight: 700, fontSize: '1.1rem', mb: 1, color: theme.palette.text.primary }}
@@ -486,8 +464,8 @@ export default function Landing() {
           <Typography
             component="h2"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
+              fontWeight: 700,
               color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
@@ -527,11 +505,10 @@ export default function Landing() {
                       flexShrink: 0,
                     }}
                   >
-                    <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem', fontFamily: "'Fredoka One', cursive" }}>
+                    <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>
                       {s.step}
                     </Typography>
                   </Box>
-                  <Typography sx={{ fontSize: '2rem', mb: 1.5, lineHeight: 1 }}>{s.icon}</Typography>
                   <Typography
                     component="h3"
                     sx={{ fontWeight: 700, fontSize: '1.05rem', mb: 1, color: theme.palette.text.primary }}
@@ -582,8 +559,8 @@ export default function Landing() {
           <Typography
             component="h2"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
+              fontWeight: 700,
               color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
@@ -624,7 +601,9 @@ export default function Landing() {
                     },
                   }}
                 >
-                  <Typography sx={{ fontSize: '2rem', mb: 1, lineHeight: 1 }}>{t.icon}</Typography>
+                  <Box sx={{ color: '#F97316', fontSize: '2rem', mb: 1, display: 'flex', justifyContent: 'center' }}>
+                    {t.icon}
+                  </Box>
                   <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: theme.palette.text.primary, lineHeight: 1.4 }}>
                     {t.label}
                   </Typography>
@@ -645,8 +624,8 @@ export default function Landing() {
           <Typography
             component="h2"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
+              fontWeight: 700,
               color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
@@ -690,9 +669,9 @@ export default function Landing() {
                     },
                   }}
                 >
-                  <Typography sx={{ fontSize: '2.4rem', mb: 1.5, lineHeight: 1 }}>
-                    {w.emoji}
-                  </Typography>
+                  <Box sx={{ color: '#F97316', mb: 1.5, lineHeight: 1 }}>
+                    {w.icon}
+                  </Box>
                   <Typography
                     component="h3"
                     sx={{ fontWeight: 700, fontSize: '1rem', mb: 1, color: theme.palette.text.primary }}
@@ -736,8 +715,8 @@ export default function Landing() {
           <Typography
             component="h2"
             sx={{
-              fontFamily: "'Fredoka One', cursive",
               fontSize: { xs: '1.8rem', md: '2.4rem' },
+              fontWeight: 700,
               color: theme.palette.text.primary,
               textAlign: 'center',
               mb: 1.5,
@@ -803,8 +782,8 @@ export default function Landing() {
         <Typography
           component="h2"
           sx={{
-            fontFamily: "'Fredoka One', cursive",
             fontSize: { xs: '1.8rem', md: '2.6rem' },
+            fontWeight: 700,
             color: '#fff',
             mb: 2,
           }}
@@ -889,10 +868,10 @@ export default function Landing() {
           <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
             <Typography
               sx={{
-                fontFamily: "'Fredoka One', cursive",
+                fontWeight: 700,
                 color: '#fff',
                 fontSize: '1.4rem',
-                letterSpacing: '0.02em',
+                letterSpacing: '-0.01em',
                 mb: 0.5,
               }}
             >

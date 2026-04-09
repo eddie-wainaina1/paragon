@@ -295,7 +295,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         {view === 'login' && (
           <Box component="form" onSubmit={handleLogin}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
-              Welcome back! 👋
+              Welcome back
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Sign in to your Nifty by Paragon account
@@ -362,7 +362,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         {view === 'register' && (
           <Box component="form" onSubmit={handleRegister}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
-              Register Organization 🏫
+              Register Organization
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Create your school's account on Nifty by Paragon
@@ -450,7 +450,7 @@ export default function AuthModal({ open, initialTab = 'login', onClose }: Props
         {view === 'individual' && (
           <Box component="form" onSubmit={handleRegisterIndividual}>
             <Typography variant="h5" sx={{ mb: 0.5 }}>
-              {applyAsTutor ? 'Apply as Tutor ⭐' : 'Join Nifty Academy 🎓'}
+              {applyAsTutor ? 'Apply as Tutor' : 'Join Nifty Academy'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {applyAsTutor

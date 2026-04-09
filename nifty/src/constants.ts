@@ -80,23 +80,23 @@ export const RoleStyle = {
 // ── Content ───────────────────────────────────────────────────────────────────
 
 export const ContentEmojiConst = {
-    text: "📄",
-    video: "🎬",
-    audio: "🎧",
-    pdf: "📑",
-    assessment: "📝",
+    text: "",
+    video: "",
+    audio: "",
+    pdf: "",
+    assessment: "",
 
     values() {
-        return ["📄", "🎬", "🎧", "📑", "📝"];
+        return ["", "", "", "", ""];
     },
 
     to_dict() {
         return {
-            text: "📄",
-            video: "🎬",
-            audio: "🎧",
-            pdf: "📑",
-            assessment: "📝",
+            text: "",
+            video: "",
+            audio: "",
+            pdf: "",
+            assessment: "",
         };
     },
 };
@@ -131,11 +131,11 @@ export const ContentType = ContentTypeConst;
 
 /** Options used in the content-type selector on Create Content. */
 export const ContentTypeOptions = [
-    { value: "text" as const, icon: "📄", label: "Text" },
-    { value: "video" as const, icon: "🎬", label: "Video" },
-    { value: "audio" as const, icon: "🎧", label: "Audio" },
-    { value: "pdf" as const, icon: "📑", label: "PDF" },
-    { value: "assessment" as const, icon: "📝", label: "Assessment" },
+    { value: "text" as const, label: "Text" },
+    { value: "video" as const, label: "Video" },
+    { value: "audio" as const, label: "Audio" },
+    { value: "pdf" as const, label: "PDF" },
+    { value: "assessment" as const, label: "Assessment" },
 ];
 
 /** Chip colours for content type badges. */
@@ -219,33 +219,33 @@ export const ContentFilters = [
     { value: "all", label: "All", bg: "#F97316", color: "#1C1A17" },  // 6.0:1
     {
         value: "text",
-        label: "📄 Text",
+        label: "Text",
         bg: ContentTypeStyle.chip.text.bg,
         color: ContentTypeStyle.chip.text.color,
     },
     {
         value: "video",
-        label: "🎬 Video",
+        label: "Video",
         bg: ContentTypeStyle.chip.video.bg,
         color: ContentTypeStyle.chip.video.color,
     },
     {
         value: "audio",
-        label: "🎧 Audio",
+        label: "Audio",
         bg: ContentTypeStyle.chip.audio.bg,
         color: ContentTypeStyle.chip.audio.color,
     },
     {
         value: "pdf",
-        label: "📑 PDF",
+        label: "PDF",
         bg: ContentTypeStyle.chip.pdf.bg,
         color: ContentTypeStyle.chip.pdf.color,
     },
     {
         value: "assessment",
-        label: "📝 Assessment",
+        label: "Assessment",
         bg: ContentTypeStyle.chip.assessment.bg,
         color: ContentTypeStyle.chip.assessment.color,
     },
-    { value: "global", label: "🌍 Global", bg: "#FEF3C7", color: "#92400E" },
+    { value: "global", label: "Global", bg: "#FEF3C7", color: "#92400E" },
 ] as const;

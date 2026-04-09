@@ -259,7 +259,7 @@ export default function ContentViewDialog({
                   }}
                 />
                 <Chip
-                  label={content.scope === 'global' ? '🌍 Global' : '🏫 Org'}
+                  label={content.scope === 'global' ? 'Global' : 'Org'}
                   size="small"
                   sx={{
                     position: 'absolute',
@@ -307,7 +307,7 @@ export default function ContentViewDialog({
                     }}
                   />
                   <Chip
-                    label={content.scope === 'global' ? '🌍 Global' : '🏫 Org'}
+                    label={content.scope === 'global' ? 'Global' : 'Org'}
                     size="small"
                     sx={{
                       background: content.scope === 'global' ? '#FEF3C7' : '#EDE9FE',
@@ -333,10 +333,10 @@ export default function ContentViewDialog({
                   fontSize: '0.82rem',
                 }}
               >
-                {content.subject && <span>📖 {content.subject}</span>}
-                <span>👁 {content.views} views</span>
-                {content.author_name && <span>✍️ {content.author_name}</span>}
-                {content.org_name && <span>🏫 {content.org_name}</span>}
+                {content.subject && <span>{content.subject}</span>}
+                <span>{content.views} views</span>
+                {content.author_name && <span>{content.author_name}</span>}
+                {content.org_name && <span>{content.org_name}</span>}
               </Box>
 
               <Divider sx={{ mb: 2 }} />
@@ -532,9 +532,6 @@ export default function ContentViewDialog({
 
                   {assessmentState === 'result' && assessmentResult && (
                     <Box sx={{ textAlign: 'center', py: 2 }}>
-                      <Typography sx={{ fontSize: '3rem', mb: 1 }}>
-                        {assessmentResult.passed ? '🎉' : '😔'}
-                      </Typography>
                       <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 800 }}>
                         {assessmentResult.score.toFixed(0)}%
                       </Typography>
@@ -629,7 +626,7 @@ export default function ContentViewDialog({
               onClick={onUnmark}
               disabled={markPending}
             >
-              ✅ Mark as Not Done
+              Mark as Not Done
             </Button>
           ) : (
             <Button

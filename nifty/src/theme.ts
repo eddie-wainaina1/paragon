@@ -52,14 +52,14 @@ export function createAppTheme(mode: 'light' | 'dark') {
       },
     },
     typography: {
-      fontFamily: "'Fredoka', sans-serif",
-      h1: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
-      h2: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
-      h3: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
-      h4: { fontFamily: "'Fredoka One', cursive", fontWeight: 400, letterSpacing: '0.02em' },
-      h5: { fontFamily: "'Fredoka One', cursive", fontWeight: 400 },
-      h6: { fontFamily: "'Fredoka One', cursive", fontWeight: 400 },
-      button: { fontFamily: "'Fredoka', sans-serif", fontWeight: 600, letterSpacing: '0.02em' },
+      fontFamily: "'Inter', sans-serif",
+      h1: { fontWeight: 700, letterSpacing: '-0.01em' },
+      h2: { fontWeight: 700, letterSpacing: '-0.01em' },
+      h3: { fontWeight: 700, letterSpacing: '-0.01em' },
+      h4: { fontWeight: 700 },
+      h5: { fontWeight: 600 },
+      h6: { fontWeight: 600 },
+      button: { fontFamily: "'Inter', sans-serif", fontWeight: 600, letterSpacing: '0.01em' },
     },
     shape: {
       borderRadius: 12,
@@ -68,18 +68,10 @@ export function createAppTheme(mode: 'light' | 'dark') {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 50,
+            borderRadius: 8,
             textTransform: 'none',
             fontWeight: 600,
-            fontSize: '1rem',
-          },
-          containedPrimary: {
-            background: 'linear-gradient(135deg, #F97316, #EA580C)',
-            boxShadow: '0 4px 14px rgba(249,115,22,0.35)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #EA580C, #C2410C)',
-              boxShadow: '0 6px 20px rgba(249,115,22,0.45)',
-            },
+            fontSize: '0.95rem',
           },
         },
       },
@@ -120,8 +112,8 @@ export function createAppTheme(mode: 'light' | 'dark') {
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 50,
-            fontWeight: 700,
+            borderRadius: 6,
+            fontWeight: 600,
           },
         },
       },

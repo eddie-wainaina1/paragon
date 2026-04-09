@@ -29,10 +29,23 @@ import {
   Tooltip,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import PlayCircleOutlinedIcon from '@mui/icons-material/PlayCircleOutlined';
+import AudiotrackOutlinedIcon from '@mui/icons-material/AudiotrackOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import { contentApi } from '@/api/content';
 import { useAuthStore } from '@/store/authStore';
-import { ContentTypeStyle, ContentTypeOptions, Role } from '@/constants';
+import { ContentTypeStyle, Role } from '@/constants';
 import type { Content, ContentScope, AssessmentQuestion } from '@/types';
+
+const CONTENT_TYPE_ICONS: Record<string, React.ReactElement> = {
+  text: <ArticleOutlinedIcon />,
+  video: <PlayCircleOutlinedIcon />,
+  audio: <AudiotrackOutlinedIcon />,
+  pdf: <PictureAsPdfOutlinedIcon />,
+  assessment: <AssignmentOutlinedIcon />,
+};
 
 // ── Shared question form (add & edit) ────────────────────────────────────────
 
@@ -241,7 +254,7 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 4, border: '2px solid', borderColor: 'divider' } }}
     >
-      <DialogTitle sx={{ fontFamily: "'Fredoka One', cursive" }}>✏️ Edit Content</DialogTitle>
+      <DialogTitle>Edit Content</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
@@ -267,12 +280,14 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
               Content Type
             </Typography>
             <Chip
-              label={`${ContentTypeOptions.find((o) => o.value === contentType)?.icon ?? ''} ${contentType}`}
+              icon={contentType ? CONTENT_TYPE_ICONS[contentType] : undefined}
+              label={contentType}
               size="small"
               sx={{
                 fontWeight: 700,
                 background: (ContentTypeStyle.chip as Record<string, { bg: string; color: string }>)[contentType ?? '']?.bg,
                 color: (ContentTypeStyle.chip as Record<string, { bg: string; color: string }>)[contentType ?? '']?.color,
+                '& .MuiChip-icon': { color: 'inherit' },
               }}
             />
           </Box>
@@ -280,8 +295,8 @@ function EditDialog({ content, canGlobal, onClose, onSaved }: EditDialogProps) {
             <FormControl fullWidth>
               <InputLabel>Scope</InputLabel>
               <Select value={scope} label="Scope" onChange={(e) => setScope(e.target.value as ContentScope)}>
-                <MenuItem value="global">🌍 Global</MenuItem>
-                <MenuItem value="org">🏫 Org</MenuItem>
+                <MenuItem value="global">Global</MenuItem>
+                <MenuItem value="org">Org</MenuItem>
               </Select>
             </FormControl>
           )}
@@ -442,7 +457,7 @@ export default function MyContent() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        🗂️ My Content
+        My Content
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         {mine.length} item{mine.length !== 1 ? 's' : ''} you've created
@@ -475,8 +490,7 @@ export default function MyContent() {
               <TableRow>
                 <TableCell colSpan={5}>
                   <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>📭</Typography>
-                    <Typography>No content yet. Create your first lesson!</Typography>
+                    <Typography>No content yet. Create your first lesson.</Typography>
                   </Box>
                 </TableCell>
               </TableRow>
@@ -499,14 +513,15 @@ export default function MyContent() {
                     </TableCell>
                     <TableCell>
                       <Chip
+                        icon={CONTENT_TYPE_ICONS[c.type]}
                         label={c.type}
                         size="small"
-                        sx={{ background: tc.bg, color: tc.color, fontWeight: 700 }}
+                        sx={{ background: tc.bg, color: tc.color, fontWeight: 700, '& .MuiChip-icon': { color: 'inherit' } }}
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={c.scope === 'global' ? '🌍 Global' : '🏫 Org'}
+                        label={c.scope === 'global' ? 'Global' : 'Org'}
                         size="small"
                         sx={{
                           background: c.scope === 'global' ? '#FEF3C7' : '#EDE9FE',
@@ -515,7 +530,7 @@ export default function MyContent() {
                         }}
                       />
                     </TableCell>
-                    <TableCell>👁 {c.views}</TableCell>
+                    <TableCell>{c.views}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button

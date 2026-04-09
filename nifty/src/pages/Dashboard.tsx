@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Box, Typography, Grid, Card, CardActionArea, CardContent, Button, Chip, Skeleton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import { useAuthStore } from '@/store/authStore';
 import { contentApi } from '@/api/content';
 import { usersApi } from '@/api/users';
@@ -12,7 +19,7 @@ import ContentViewDialog from '@/components/Content/ContentViewDialog';
 import { Role } from '@/constants';
 
 interface StatCardProps {
-  icon: string;
+  icon: React.ReactNode;
   value: number | string;
   label: string;
   color?: string;
@@ -22,11 +29,13 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
   return (
     <Card>
       <CardContent sx={{ pb: '16px !important' }}>
-        <Typography sx={{ fontSize: '1.6rem', mb: 0.5 }}>{icon}</Typography>
+        <Box sx={{ color: color ?? 'primary.main', mb: 0.5, display: 'flex', alignItems: 'center' }}>
+          {icon}
+        </Box>
         <Typography
           sx={{
-            fontFamily: "'Fredoka One', cursive",
             fontSize: '2rem',
+            fontWeight: 700,
             color: color ?? 'primary.main',
             lineHeight: 1.2,
           }}
@@ -36,7 +45,7 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
         <Typography
           sx={{
             fontSize: '0.78rem',
-            fontWeight: 800,
+            fontWeight: 700,
             color: 'text.secondary',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -120,31 +129,17 @@ export default function Dashboard() {
     <Box
       sx={{
         background: 'linear-gradient(135deg,#F97316 0%,#EA580C 60%,#92400E 100%)',
-        borderRadius: 3,
+        borderRadius: 2,
         p: { xs: '20px 20px', md: '28px 32px' },
         color: '#fff',
         mb: 3.5,
-        position: 'relative',
-        overflow: 'hidden',
-        '&::after': {
-          content: '"🚀"',
-          position: 'absolute',
-          right: 28,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: '4rem',
-          opacity: 0.2,
-        },
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{ color: '#fff', mb: 0.5, fontFamily: "'Fredoka One', cursive" }}
-      >
-        Hello, {user.name.split(' ')[0]}! 👋
+      <Typography variant="h4" sx={{ color: '#fff', mb: 0.5 }}>
+        Welcome back, {user.name.split(' ')[0]}
       </Typography>
       <Typography sx={{ opacity: 0.9, fontSize: '0.95rem' }}>
-        Welcome to Nifty by Paragon — {user.org_name} · {Role.to_dict()[user.role]}
+        Nifty by Paragon — {user.org_name} · {Role.to_dict()[user.role]}
       </Typography>
     </Box>
   );
@@ -158,26 +153,26 @@ export default function Dashboard() {
         {/* Stats */}
         <Grid container spacing={2} sx={{ mb: 3.5 }}>
           <Grid size={{ xs: 6, sm: 4 }}>
-            <StatCard icon="🔓" value={availableLoading ? '…' : availableClasses.length} label="Available Classes" color="#22C55E" />
+            <StatCard icon={<LockOpenOutlinedIcon />} value={availableLoading ? '…' : availableClasses.length} label="Available Classes" color="#22C55E" />
           </Grid>
           <Grid size={{ xs: 6, sm: 4 }}>
-            <StatCard icon="🎓" value={enrolledLoading ? '…' : enrolledClasses.length} label="My Classes" color="#F97316" />
+            <StatCard icon={<SchoolOutlinedIcon />} value={enrolledLoading ? '…' : enrolledClasses.length} label="My Classes" color="#F97316" />
           </Grid>
           <Grid size={{ xs: 6, sm: 4 }}>
-            <StatCard icon="✅" value={0} label="Completed" color="#FACC15" />
+            <StatCard icon={<CheckCircleOutlinedIcon />} value={0} label="Completed" color="#FACC15" />
           </Grid>
         </Grid>
 
         {/* Enrolled classes */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem' }}>
-            🎓 My Classes
+          <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>
+            My Classes
           </Typography>
           <Button
             size="small"
             variant="contained"
             onClick={() => navigate('/app/classes')}
-            sx={{ borderRadius: 50, fontSize: '0.82rem', px: 2, py: 0.75 }}
+            sx={{ fontSize: '0.82rem', px: 2, py: 0.75 }}
           >
             View All
           </Button>
@@ -193,7 +188,7 @@ export default function Dashboard() {
               ? (
                 <Grid size={{ xs: 12 }}>
                   <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
-                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>📭</Typography>
+                    <InboxOutlinedIcon sx={{ fontSize: '3rem', mb: 1, opacity: 0.4 }} />
                     <Typography>You haven't joined any classes yet.</Typography>
                   </Box>
                 </Grid>
@@ -207,8 +202,8 @@ export default function Dashboard() {
 
         {/* Available classes */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem' }}>
-            🔓 Available Classes
+          <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>
+            Available Classes
           </Typography>
         </Box>
         <Grid container spacing={2.5}>
@@ -222,8 +217,8 @@ export default function Dashboard() {
               ? (
                 <Grid size={{ xs: 12 }}>
                   <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>
-                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>🎉</Typography>
-                    <Typography>You're enrolled in all available classes!</Typography>
+                    <CheckCircleOutlinedIcon sx={{ fontSize: '3rem', mb: 1, opacity: 0.4 }} />
+                    <Typography>You're enrolled in all available classes.</Typography>
                   </Box>
                 </Grid>
               )
@@ -237,7 +232,7 @@ export default function Dashboard() {
                         size="small"
                         variant="outlined"
                         onClick={() => navigate('/app/classes')}
-                        sx={{ borderRadius: 50, fontSize: '0.78rem' }}
+                        sx={{ fontSize: '0.78rem' }}
                       >
                         Join Class
                       </Button>
@@ -258,33 +253,31 @@ export default function Dashboard() {
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3.5 }}>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <StatCard icon="📚" value={contentList.length} label="Content Items" color="#F97316" />
+          <StatCard icon={<ArticleOutlinedIcon />} value={contentList.length} label="Content Items" color="#F97316" />
         </Grid>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <StatCard icon="👥" value={usersList.length} label="Users" color="#EA580C" />
+          <StatCard icon={<GroupOutlinedIcon />} value={usersList.length} label="Users" color="#EA580C" />
         </Grid>
         {isSuperAdmin && (
           <Grid size={{ xs: 6, sm: 3 }}>
-            <StatCard icon="🏫" value={orgsList.length} label="Organizations" color="#22C55E" />
+            <StatCard icon={<BusinessOutlinedIcon />} value={orgsList.length} label="Organizations" color="#22C55E" />
           </Grid>
         )}
         <Grid size={{ xs: 6, sm: 3 }}>
-          <StatCard icon="🎓" value={enrolledClasses.length} label="Classes" color="#FACC15" />
+          <StatCard icon={<SchoolOutlinedIcon />} value={enrolledClasses.length} label="Classes" color="#FACC15" />
         </Grid>
       </Grid>
 
       {/* Recent content */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography
-          sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem', color: 'text.primary' }}
-        >
-          📌 Recent Content
+        <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: 'text.primary' }}>
+          Recent Content
         </Typography>
         <Button
           size="small"
           variant="contained"
           onClick={() => navigate('/app/content')}
-          sx={{ borderRadius: 50, fontSize: '0.82rem', px: 2, py: 0.75 }}
+          sx={{ fontSize: '0.82rem', px: 2, py: 0.75 }}
         >
           View All
         </Button>
@@ -305,8 +298,8 @@ export default function Dashboard() {
         {!contentLoading && recentContent.length === 0 && (
           <Grid size={{ xs: 12 }}>
             <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-              <Typography sx={{ fontSize: '3.5rem', mb: 1 }}>📭</Typography>
-              <Typography>No content yet. Create your first lesson!</Typography>
+              <InboxOutlinedIcon sx={{ fontSize: '3rem', mb: 1, opacity: 0.4 }} />
+              <Typography>No content yet. Create your first lesson.</Typography>
             </Box>
           </Grid>
         )}

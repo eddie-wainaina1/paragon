@@ -296,7 +296,7 @@ export default function CreateContent() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        ✏️ Create Content
+        Create Content
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Add new learning material{canGlobal ? ' for all subscribers or your organization' : ' for your organization'}
@@ -357,7 +357,6 @@ export default function CreateContent() {
                     '&:hover': { borderColor: 'primary.main' },
                   }}
                 >
-                  <Typography sx={{ fontSize: '1.8rem', mb: 0.5 }}>{opt.icon}</Typography>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{opt.label}</Typography>
                 </Box>
               ))}
@@ -372,8 +371,8 @@ export default function CreateContent() {
                   label="Access Scope"
                   onChange={(e) => setScope(e.target.value as ContentScope)}
                 >
-                  <MenuItem value="global">🌍 Global — visible to all subscribers</MenuItem>
-                  <MenuItem value="org">🏫 Organization only</MenuItem>
+                  <MenuItem value="global">Global — visible to all subscribers</MenuItem>
+                  <MenuItem value="org">Organization only</MenuItem>
                 </Select>
               </FormControl>
             )}
@@ -403,7 +402,7 @@ export default function CreateContent() {
                   size="small"
                   sx={{ borderRadius: 2 }}
                 >
-                  {file ? `📎 ${file.name}` : `Choose ${type.toUpperCase()} file`}
+                  {file ? file.name : `Choose ${type.toUpperCase()} file`}
                   <input
                     type="file"
                     hidden
@@ -464,7 +463,7 @@ export default function CreateContent() {
                 ) : null
               }
             >
-              Publish Content 🚀
+              Publish Content
             </Button>
           </Box>
         </CardContent>

@@ -100,7 +100,7 @@ export default function Classes() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        🎓 Classes
+        Classes
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         {isStudent
@@ -148,7 +148,7 @@ export default function Classes() {
                   }
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <span>🌍 Global class</span>
+                      <span>Global class</span>
                       <Typography variant="caption" color="text.secondary">
                         (any student can enroll)
                       </Typography>
@@ -171,9 +171,7 @@ export default function Classes() {
         </Card>
       )}
 
-      <Typography
-        sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem', mb: 2 }}
-      >
+      <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, mb: 2 }}>
         {isStudent ? 'My Classes' : 'All Classes'}
       </Typography>
 
@@ -207,7 +205,7 @@ export default function Classes() {
               <TableRow>
                 <TableCell colSpan={7}>
                   <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>🏫</Typography>
+                    <Typography sx={{ fontSize: '2rem', mb: 1, opacity: 0.3 }}>—</Typography>
                     <Typography>
                       {isStudent ? 'No classes available yet.' : 'No classes yet.'}
                     </Typography>
@@ -230,13 +228,13 @@ export default function Classes() {
                     <TableCell>
                       {c.scope === 'global' ? (
                         <Chip
-                          label="🌍 Global"
+                          label="Global"
                           size="small"
                           sx={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}
                         />
                       ) : (
                         <Chip
-                          label="🏫 Org"
+                          label="Org"
                           size="small"
                           variant="outlined"
                           sx={{ fontWeight: 700, color: 'text.secondary' }}
@@ -261,8 +259,8 @@ export default function Classes() {
                         sx={{ fontWeight: 700 }}
                       />
                     </TableCell>
-                    <TableCell>👤 {c.student_count}</TableCell>
-                    <TableCell>📚 {c.content_count}</TableCell>
+                    <TableCell>{c.student_count}</TableCell>
+                    <TableCell>{c.content_count}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
@@ -325,10 +323,8 @@ export default function Classes() {
       {/* Available classes for students */}
       {isStudent && (
         <>
-          <Typography
-            sx={{ fontFamily: "'Fredoka One', cursive", fontSize: '1.2rem', mt: 4, mb: 2 }}
-          >
-            🔓 Available Classes
+          <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, mt: 4, mb: 2 }}>
+            Available Classes
           </Typography>
           <Paper
             variant="outlined"
@@ -359,8 +355,7 @@ export default function Classes() {
                   <TableRow>
                     <TableCell colSpan={7}>
                       <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                        <Typography sx={{ fontSize: '3rem', mb: 1 }}>🎉</Typography>
-                        <Typography>You're enrolled in all available classes!</Typography>
+                        <Typography>You're enrolled in all available classes.</Typography>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -378,13 +373,13 @@ export default function Classes() {
                       <TableCell>
                         {c.scope === 'global' ? (
                           <Chip
-                            label="🌍 Global"
+                            label="Global"
                             size="small"
                             sx={{ background: '#FEF3C7', color: '#92400E', fontWeight: 700 }}
                           />
                         ) : (
                           <Chip
-                            label="🏫 Org"
+                            label="Org"
                             size="small"
                             variant="outlined"
                             sx={{ fontWeight: 700, color: 'text.secondary' }}
@@ -409,7 +404,7 @@ export default function Classes() {
                           sx={{ fontWeight: 700 }}
                         />
                       </TableCell>
-                      <TableCell>👤 {c.student_count}</TableCell>
+                      <TableCell>{c.student_count}</TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="small"

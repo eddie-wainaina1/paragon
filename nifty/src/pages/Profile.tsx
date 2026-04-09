@@ -62,7 +62,7 @@ export default function Profile() {
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
-        ⚙️ Profile & Settings
+        Profile & Settings
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         Manage your account
@@ -86,8 +86,8 @@ export default function Profile() {
             <Box>
               <Typography
                 sx={{
-                  fontFamily: "'Fredoka One', cursive",
-                  fontSize: '1.4rem',
+                  fontSize: '1.2rem',
+                  fontWeight: 700,
                 }}
               >
                 {user.name}
